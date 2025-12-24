@@ -18,6 +18,8 @@ export interface AIMessage {
   metadata?: {
     model?: string;
     tokens?: number;
+    thinking?: string; // 思考过程
+    isStreaming?: boolean; // 是否正在流式输出
     [key: string]: unknown;
   };
 }

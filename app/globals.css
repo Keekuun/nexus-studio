@@ -58,3 +58,47 @@
   }
 }
 
+/* Markdown 样式 */
+@layer components {
+  .prose {
+    @apply text-foreground;
+  }
+  
+  .prose code {
+    @apply text-sm;
+  }
+  
+  .prose pre {
+    @apply bg-gray-900 dark:bg-gray-800;
+  }
+  
+  .prose pre code {
+    @apply text-gray-100;
+  }
+  
+  .prose img {
+    @apply rounded-lg;
+  }
+  
+  .prose a {
+    @apply text-blue-600 dark:text-blue-400 hover:underline;
+  }
+  
+  .prose blockquote {
+    @apply border-l-4 border-gray-300 dark:border-gray-600 pl-4 italic;
+  }
+  
+  .prose table {
+    @apply border-collapse border border-gray-300 dark:border-gray-600;
+  }
+  
+  .prose th,
+  .prose td {
+    @apply border border-gray-300 dark:border-gray-600 px-4 py-2;
+  }
+  
+  .prose th {
+    @apply bg-gray-100 dark:bg-gray-800 font-semibold;
+  }
+}
+

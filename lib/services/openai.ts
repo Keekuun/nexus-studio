@@ -228,29 +228,64 @@ export async function streamOpenAIAPI(
     throw new Error("No response body");
   }
 
+  let buffer = ""; // 缓冲区，用于处理不完整的行
+
   try {
     while (true) {
       const { done, value } = await reader.read();
-      if (done) break;
-
-      const chunk = decoder.decode(value, { stream: true });
-      const lines = chunk.split("\n");
-
-      for (const line of lines) {
-        if (line.startsWith("data: ")) {
-          const data = line.slice(6);
-          if (data === "[DONE]") {
-            return;
-          }
-
-          try {
-            const json = JSON.parse(data);
-            const delta = json.choices[0]?.delta?.content;
-            if (delta) {
-              onChunk(delta);
+      if (done) {
+        // 处理缓冲区中剩余的数据
+        if (buffer.trim()) {
+          const lines = buffer.split("\n");
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              const data = line.slice(6).trim();
+              if (data && data !== "[DONE]") {
+                try {
+                  const json = JSON.parse(data);
+                  const delta = json.choices[0]?.delta?.content;
+                  if (delta) {
+                    onChunk(delta);
+                  }
+                } catch {
+                  // 忽略解析错误
+                }
+              }
             }
-          } catch {
-            // 忽略解析错误
+          }
+        }
+        break;
+      }
+
+      // 解码数据块并添加到缓冲区
+      const chunk = decoder.decode(value, { stream: true });
+      buffer += chunk;
+
+      // 处理完整的行（以 \n\n 分隔的 SSE 消息）
+      const parts = buffer.split("\n\n");
+      // 保留最后一个不完整的部分在缓冲区
+      buffer = parts.pop() || "";
+
+      for (const part of parts) {
+        const lines = part.split("\n");
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            const data = line.slice(6).trim();
+            if (data === "[DONE]") {
+              return;
+            }
+
+            if (data) {
+              try {
+                const json = JSON.parse(data);
+                const delta = json.choices[0]?.delta?.content;
+                if (delta) {
+                  onChunk(delta);
+                }
+              } catch {
+                // 忽略解析错误
+              }
+            }
           }
         }
       }

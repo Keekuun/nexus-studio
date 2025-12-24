@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Loading } from "@/components/ui/loading";
 import { ErrorMessage } from "@/components/ui/error-message";
 import { useAIChat } from "@/lib/hooks/use-ai-chat";
+import { MessageContent } from "@/components/ai/message-content";
 import { cn } from "@/lib/utils/cn";
 import type { AIMessage } from "@/types/ai";
 
@@ -19,6 +20,8 @@ export function ChatInterface(): JSX.Element {
     currentModel,
     setCurrentModel,
     sendMessage,
+    cancelRequest,
+    retryLastMessage,
     clearMessages,
   } = useAIChat();
   const [input, setInput] = useState("");
@@ -98,19 +101,48 @@ export function ChatInterface(): JSX.Element {
           </div>
         )}
 
-        {messages.map((message) => (
-          <ChatMessage key={message.id} message={message} />
+        {messages.map((message, index) => (
+          <ChatMessage
+            key={message.id}
+            message={message}
+            isLastAssistant={
+              index === messages.length - 1 && message.role === "assistant"
+            }
+            onRetry={retryLastMessage}
+          />
         ))}
 
         {loading && (
           <div className="flex justify-start">
-            <div className="bg-muted rounded-lg p-4">
+            <div className="bg-muted rounded-lg p-4 flex items-center gap-3">
               <Loading size="sm" />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={cancelRequest}
+                className="h-8 text-xs"
+              >
+                取消
+              </Button>
             </div>
           </div>
         )}
 
-        {error && <ErrorMessage error={error} />}
+        {error && (
+          <div className="space-y-2">
+            <ErrorMessage error={error} />
+            <div className="flex justify-center">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={retryLastMessage}
+                className="text-xs"
+              >
+                🔄 重试
+              </Button>
+            </div>
+          </div>
+        )}
 
         <div ref={messagesEndRef} />
       </div>
@@ -125,9 +157,19 @@ export function ChatInterface(): JSX.Element {
             className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
             disabled={loading}
           />
-          <Button type="submit" disabled={loading || !input.trim()}>
-            发送
-          </Button>
+          {loading ? (
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={cancelRequest}
+            >
+              取消
+            </Button>
+          ) : (
+            <Button type="submit" disabled={loading || !input.trim()}>
+              发送
+            </Button>
+          )}
         </div>
       </form>
     </div>
@@ -137,7 +179,15 @@ export function ChatInterface(): JSX.Element {
 /**
  * 聊天消息组件
  */
-function ChatMessage({ message }: { message: AIMessage }): JSX.Element {
+function ChatMessage({
+  message,
+  isLastAssistant = false,
+  onRetry,
+}: {
+  message: AIMessage;
+  isLastAssistant?: boolean;
+  onRetry?: () => void;
+}): JSX.Element {
   const isUser = message.role === "user";
 
   return (
@@ -149,23 +199,61 @@ function ChatMessage({ message }: { message: AIMessage }): JSX.Element {
     >
       <div
         className={cn(
-          "max-w-[80%] rounded-lg p-4",
+          "max-w-[80%] rounded-lg p-4 group",
           isUser
             ? "bg-primary text-primary-foreground"
             : "bg-muted text-foreground"
         )}
       >
-        <p className="whitespace-pre-wrap">{message.content}</p>
+        {isUser ? (
+          <p className="whitespace-pre-wrap">{message.content}</p>
+        ) : (
+          <MessageContent content={message.content} isUser={false} />
+        )}
+        
+        {/* 思考过程显示 */}
+        {message.metadata?.thinking && !isUser && (
+          <details className="mt-3 cursor-pointer">
+            <summary className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium">
+              💭 查看思考过程
+            </summary>
+            <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg text-xs text-blue-700 dark:text-blue-300 whitespace-pre-wrap">
+              {message.metadata.thinking}
+            </div>
+          </details>
+        )}
+
+        {/* 流式输出指示器 */}
+        {message.metadata?.isStreaming && (
+          <div className="flex items-center gap-2 mt-2">
+            <span className="inline-block w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+            <span className="text-xs text-muted-foreground">正在输入...</span>
+          </div>
+        )}
+
         <div className="flex items-center justify-between mt-2">
           <p className={cn("text-xs", isUser ? "text-primary-foreground/70" : "text-muted-foreground")}>
             {new Date(message.timestamp).toLocaleTimeString()}
           </p>
-          {message.metadata?.model && !isUser && (
-            <p className={cn("text-xs", "text-muted-foreground")}>
-              {/*{message.metadata.model.replace(":free", "")}*/}
-              {message.metadata.model}
-            </p>
-          )}
+          <div className="flex items-center gap-2">
+            {message.metadata?.model && !isUser && (
+              <p className={cn("text-xs", "text-muted-foreground")}>
+                {message.metadata.model}
+              </p>
+            )}
+            {/* AI消息的重试按钮 */}
+            {!isUser && !message.metadata?.isStreaming && isLastAssistant && onRetry && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onRetry}
+                className="h-6 px-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                title="重试此消息"
+              >
+                🔄
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </div>

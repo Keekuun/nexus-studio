@@ -70,13 +70,25 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       const stream = new ReadableStream({
         async start(controller) {
           try {
+            let thinkingBuffer = "";
+
             if (useOpenAI) {
               await streamOpenAIAPI(
                 conversationMessages,
                 config || {},
                 (chunk: string) => {
-                  const data = `data: ${JSON.stringify({ chunk })}\n\n`;
-                  controller.enqueue(encoder.encode(data));
+                  // 检测思考过程（OpenAI的某些模型可能包含思考标记）
+                  if (chunk.includes("<think>") || chunk.includes("</think>")) {
+                    thinkingBuffer += chunk;
+                    const thinkingMatch = chunk.match(/<think>([\s\S]*?)<\/think>/);
+                    if (thinkingMatch) {
+                      const data = `data: ${JSON.stringify({ thinking: thinkingMatch[1] })}\n\n`;
+                      controller.enqueue(encoder.encode(data));
+                    }
+                  } else {
+                    const data = `data: ${JSON.stringify({ chunk })}\n\n`;
+                    controller.enqueue(encoder.encode(data));
+                  }
                 }
               );
             } else {
@@ -84,8 +96,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
                 conversationMessages,
                 config || {},
                 (chunk: string) => {
-                  const data = `data: ${JSON.stringify({ chunk })}\n\n`;
-                  controller.enqueue(encoder.encode(data));
+                  // 检测思考过程（OpenRouter可能返回思考标记）
+                  if (chunk.includes("<think>") || chunk.includes("</think>")) {
+                    thinkingBuffer += chunk;
+                    const thinkingMatch = chunk.match(/<think>([\s\S]*?)<\/think>/);
+                    if (thinkingMatch) {
+                      const data = `data: ${JSON.stringify({ thinking: thinkingMatch[1] })}\n\n`;
+                      controller.enqueue(encoder.encode(data));
+                    }
+                  } else {
+                    const data = `data: ${JSON.stringify({ chunk })}\n\n`;
+                    controller.enqueue(encoder.encode(data));
+                  }
                 }
               );
             }
