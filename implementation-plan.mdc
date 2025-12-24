@@ -93,6 +93,12 @@
 - [x] 创建AI聊天Hook
 - [x] 创建AI聊天界面组件
 - [x] 创建AI交互页面
+- [x] 集成OpenRouter API
+  - Done: 创建OpenRouter服务（lib/services/openrouter.ts）
+  - Done: 支持对话历史传递
+  - Done: 支持流式响应（可选）
+  - Done: 更新API路由以使用OpenRouter
+  - Done: 更新use-ai-chat Hook支持完整对话历史
 
 ### 3.4 实时通信集成
 - [x] SSE和WebSocket基础设施已就绪
@@ -106,6 +112,10 @@
 - [x] Next.js配置优化（图片格式、压缩、包导入优化）
 - [x] 性能监控工具（性能测量、防抖、节流）
 - [x] 全局性能监控集成
+  - Done: 完善性能监控工具，添加页面性能指标获取功能
+  - Done: 创建性能监控Hook（use-performance-monitor.ts）
+  - Done: 创建性能监控组件（PerformanceMonitor），集成到全局布局
+  - Done: 添加页面加载时间、资源加载、Paint指标监控
 
 ### 4.2 错误处理
 - [x] 全局错误边界（app/error.tsx）
@@ -114,8 +124,14 @@
 - [x] 错误日志记录功能
 
 ### 4.3 测试
-- [ ] 单元测试框架配置
-- [ ] 编写核心功能单元测试
+- [x] 单元测试框架配置
+  - Done: 安装Jest和React Testing Library依赖
+  - Done: 配置Jest（jest.config.ts）和测试设置（jest.setup.ts）
+  - Done: 添加测试脚本到package.json
+- [x] 编写核心功能单元测试
+  - Done: 性能工具函数测试（measurePerformance、debounce、throttle、getPagePerformanceMetrics）
+  - Done: cn工具函数测试
+  - Done: 错误处理工具函数测试（AppError、getErrorMessage、handleApiError、logError）
 - [ ] 集成测试
 - [ ] E2E测试（如需要）
 - [ ] 测试覆盖率报告
@@ -164,6 +180,11 @@
   - ✅ 实时通信集成（基础设施就绪，各模块可集成）
 - **阶段四进行中**：优化和测试
   - ✅ 性能优化（代码分割、懒加载、Next.js配置优化、性能监控工具）
+    - 完善性能监控工具：添加页面性能指标获取、资源监控、Paint指标
+    - 创建性能监控Hook和组件，集成到全局布局
   - ✅ 错误处理（全局错误边界、404页面、错误处理工具、错误日志）
-  - [ ] 测试（单元测试框架配置、核心功能测试）
+  - ✅ 测试（单元测试框架配置、核心功能测试）
+    - 配置Jest和React Testing Library
+    - 编写性能工具函数、cn工具函数、错误处理工具函数的单元测试
+    - 所有测试通过（33个测试用例）
   - [ ] 文档完善（API文档、组件文档、使用指南）

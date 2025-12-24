@@ -170,6 +170,64 @@ npm install -g pnpm
 pnpm install
 ```
 
+### 环境变量配置
+
+创建 `.env.local` 文件（参考 `.env.example`），配置以下环境变量：
+
+```bash
+# 方式一：使用 OpenRouter（推荐，支持多个免费模型）
+OPENROUTER_API_KEY=your_openrouter_api_key_here
+
+# OpenRouter Base URL（可选，默认使用官方地址）
+OPENROUTER_BASE_URL=https://openrouter.ai
+
+# OpenRouter 默认模型（可选）
+OPENROUTER_DEFAULT_MODEL=meta-llama/llama-3.2-3b-instruct:free
+
+# OpenRouter 可用模型列表（可选，逗号分隔，用于对话框中的模型切换）
+OPENROUTER_MODELS=meta-llama/llama-3.2-3b-instruct:free,google/gemini-flash-1.5:free,microsoft/phi-3-mini-128k-instruct:free,qwen/qwen-2.5-7b-instruct:free
+
+# 方式二：直接使用 OpenAI API
+OPENAI_API_KEY=your_openai_api_key_here
+
+# OpenAI 默认模型（可选，默认使用 gpt-3.5-turbo）
+OPENAI_DEFAULT_MODEL=gpt-3.5-turbo
+
+# 应用配置（可选）
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
+
+**配置说明：**
+- **OpenRouter**：如果配置了 `OPENROUTER_API_KEY`，将使用 OpenRouter API（支持多个免费模型）
+- **OpenAI**：如果只配置了 `OPENAI_API_KEY`（没有配置 `OPENROUTER_API_KEY`），将直接使用 OpenAI API
+- 优先使用 OpenRouter，如果未配置 OpenRouter 则使用 OpenAI
+
+**获取 API Key：**
+
+**OpenRouter API Key：**
+1. 访问 [OpenRouter](https://openrouter.ai/)
+2. 注册账号并登录
+3. 在 [API Keys](https://openrouter.ai/keys) 页面创建新的 API Key
+4. 将 API Key 复制到 `.env.local` 文件中
+
+**OpenAI API Key：**
+1. 访问 [OpenAI Platform](https://platform.openai.com/)
+2. 注册账号并登录
+3. 在 [API Keys](https://platform.openai.com/api-keys) 页面创建新的 API Key
+4. 将 API Key 复制到 `.env.local` 文件中
+
+**模型配置：**
+
+**OpenRouter 模型：**
+- **默认模型**：通过 `OPENROUTER_DEFAULT_MODEL` 环境变量设置，如果不配置则使用 `meta-llama/llama-3.2-3b-instruct:free`
+- **可用模型列表**：通过 `OPENROUTER_MODELS` 环境变量设置（逗号分隔），这些模型会显示在对话框的模型选择器中
+- 如果不配置 `OPENROUTER_MODELS`，将使用默认的免费模型列表
+
+**OpenAI 模型：**
+- **默认模型**：通过 `OPENAI_DEFAULT_MODEL` 环境变量设置，如果不配置则使用 `gpt-3.5-turbo`
+- **可用模型**：gpt-4o, gpt-4o-mini, gpt-4-turbo, gpt-4, gpt-3.5-turbo
+- 用户可以在对话框中切换不同的模型进行对话
+
 ### 开发运行
 ```bash
 pnpm dev

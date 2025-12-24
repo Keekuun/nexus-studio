@@ -12,9 +12,40 @@ import type { AIMessage } from "@/types/ai";
  * AI聊天界面组件
  */
 export function ChatInterface(): JSX.Element {
-  const { messages, loading, error, sendMessage, clearMessages } = useAIChat();
+  const {
+    messages,
+    loading,
+    error,
+    currentModel,
+    setCurrentModel,
+    sendMessage,
+    clearMessages,
+  } = useAIChat();
   const [input, setInput] = useState("");
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [defaultModel, setDefaultModel] = useState<string>("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // 加载可用模型列表
+  useEffect(() => {
+    const loadModels = async (): Promise<void> => {
+      try {
+        const response = await fetch("/api/ai/models");
+        const result = await response.json();
+        if (result.success && result.data) {
+          setAvailableModels(result.data.models);
+          const defaultM = result.data.defaultModel || result.data.models[0];
+          setDefaultModel(defaultM);
+          if (!currentModel) {
+            setCurrentModel(defaultM);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load models:", err);
+      }
+    };
+    loadModels();
+  }, [currentModel, setCurrentModel]);
 
   const scrollToBottom = (): void => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -37,9 +68,26 @@ export function ChatInterface(): JSX.Element {
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between p-4 border-b">
         <h2 className="text-xl font-semibold">AI助手</h2>
-        <Button variant="ghost" size="sm" onClick={clearMessages}>
-          清空对话
-        </Button>
+        <div className="flex items-center gap-2">
+          {availableModels.length > 0 && (
+            <select
+              value={currentModel || defaultModel}
+              onChange={(e) => setCurrentModel(e.target.value)}
+              disabled={loading}
+              className="px-3 py-1.5 text-sm border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {availableModels.map((model) => (
+                <option key={model} value={model}>
+                  {/*{model.replace(":free", "")}*/}
+                  {model}
+                </option>
+              ))}
+            </select>
+          )}
+          <Button variant="ghost" size="sm" onClick={clearMessages}>
+            清空对话
+          </Button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -108,9 +156,17 @@ function ChatMessage({ message }: { message: AIMessage }): JSX.Element {
         )}
       >
         <p className="whitespace-pre-wrap">{message.content}</p>
-        <p className={cn("text-xs mt-2", isUser ? "text-primary-foreground/70" : "text-muted-foreground")}>
-          {new Date(message.timestamp).toLocaleTimeString()}
-        </p>
+        <div className="flex items-center justify-between mt-2">
+          <p className={cn("text-xs", isUser ? "text-primary-foreground/70" : "text-muted-foreground")}>
+            {new Date(message.timestamp).toLocaleTimeString()}
+          </p>
+          {message.metadata?.model && !isUser && (
+            <p className={cn("text-xs", "text-muted-foreground")}>
+              {/*{message.metadata.model.replace(":free", "")}*/}
+              {message.metadata.model}
+            </p>
+          )}
+        </div>
       </div>
     </div>
   );

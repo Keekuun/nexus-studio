@@ -11,12 +11,15 @@ export function useAIChat(): {
   messages: AIMessage[];
   loading: boolean;
   error: string | null;
+  currentModel: string;
+  setCurrentModel: (model: string) => void;
   sendMessage: (content: string, config?: AIRequestConfig) => Promise<void>;
   clearMessages: () => void;
 } {
   const [messages, setMessages] = useState<AIMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [currentModel, setCurrentModel] = useState<string>("");
 
   const sendMessage = useCallback(
     async (content: string, config?: AIRequestConfig): Promise<void> => {
@@ -33,16 +36,34 @@ export function useAIChat(): {
         timestamp: Date.now(),
       };
 
-      setMessages((prev) => [...prev, userMessage]);
+      // 更新消息列表（包含新用户消息）
+      const updatedMessages = [...messages, userMessage];
+      setMessages(updatedMessages);
 
       try {
+        // 合并当前选择的模型到配置中
+        const requestConfig: AIRequestConfig = {
+          ...config,
+          model: config?.model || currentModel || undefined,
+        };
+
+        // 发送完整的对话历史到 API
         const response = await fetch("/api/ai/chat", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ message: content, config }),
+          body: JSON.stringify({
+            messages: updatedMessages,
+            config: requestConfig,
+          }),
         });
+
+        // 检查响应状态
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+        }
 
         const result: ApiResponse<AIResponse> = await response.json();
 
@@ -71,7 +92,7 @@ export function useAIChat(): {
         setLoading(false);
       }
     },
-    []
+    [messages, currentModel]
   );
 
   const clearMessages = useCallback((): void => {
@@ -83,6 +104,8 @@ export function useAIChat(): {
     messages,
     loading,
     error,
+    currentModel,
+    setCurrentModel,
     sendMessage,
     clearMessages,
   };
