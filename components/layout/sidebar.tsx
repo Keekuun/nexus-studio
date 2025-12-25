@@ -21,7 +21,7 @@ export function Sidebar({ className }: SidebarProps): JSX.Element {
   return (
     <aside
       className={cn(
-        "fixed left-0 top-0 z-40 h-screen w-64 border-r bg-background transition-transform",
+        "fixed left-0 top-0 z-40 h-screen w-64 border-r bg-background transition-transform block md:hidden",
         sidebarOpen ? "translate-x-0" : "-translate-x-full",
         "md:translate-x-0",
         className
@@ -29,7 +29,7 @@ export function Sidebar({ className }: SidebarProps): JSX.Element {
     >
       <div className="flex h-full flex-col p-4">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">导航</h2>
+          <h2 className="text-lg font-semibold">Nexus Studio</h2>
           <Button
             variant="ghost"
             size="sm"

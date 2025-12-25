@@ -130,7 +130,6 @@
   .prose pre {
     @apply rounded-lg p-4 overflow-x-auto my-4;
     background-color: #f6f8fa; /* GitHub light background */
-    border: 1px solid #e1e4e8;
   }
   
   .prose pre code {

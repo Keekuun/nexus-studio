@@ -10,7 +10,7 @@ export function Header(): JSX.Element {
   const setSidebarOpen = useAppStore((state) => state.setSidebarOpen);
 
   return (
-    <header className="border-b">
+    <header className="border-b sticky top-0 left-0 right-0 bg-white z-10 shadow-sm">
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button

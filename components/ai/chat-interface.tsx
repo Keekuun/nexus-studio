@@ -92,15 +92,13 @@ export function ChatInterface(): JSX.Element {
           </Button>
         </div>
       </div>
-
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 flex flex-col max-h-[500px] h-full overflow-y-auto p-4 space-y-4">
         {messages.length === 0 && (
-          <div className="text-center text-muted-foreground py-12">
+          <div className="text-center text-muted-foreground py-12 flex-1 flex flex-col items-center justify-center">
             <p className="text-lg mb-2">开始与AI对话</p>
             <p className="text-sm">输入您的问题，AI将为您提供帮助</p>
           </div>
         )}
-
         {messages.map((message, index) => (
           <ChatMessage
             key={message.id}
