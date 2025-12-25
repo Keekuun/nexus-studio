@@ -64,32 +64,273 @@
     @apply text-foreground;
   }
   
-  .prose code {
-    @apply text-sm;
+  /* 标题样式 */
+  .prose h1 {
+    @apply text-3xl font-bold mt-8 mb-4;
   }
   
+  .prose h2 {
+    @apply text-2xl font-bold mt-6 mb-3;
+  }
+  
+  .prose h3 {
+    @apply text-xl font-semibold mt-5 mb-2;
+  }
+  
+  .prose h4 {
+    @apply text-lg font-semibold mt-4 mb-2;
+  }
+  
+  .prose h5 {
+    @apply text-base font-semibold mt-3 mb-2;
+  }
+  
+  .prose h6 {
+    @apply text-sm font-semibold mt-3 mb-2;
+  }
+  
+  /* 段落样式 */
+  .prose p {
+    @apply my-4 leading-relaxed;
+  }
+  
+  /* 列表样式 */
+  .prose ul,
+  .prose ol {
+    @apply my-4 pl-6;
+  }
+  
+  .prose ul {
+    @apply list-disc;
+  }
+  
+  .prose ol {
+    @apply list-decimal;
+  }
+  
+  .prose li {
+    @apply my-2;
+  }
+  
+  .prose li > p {
+    @apply my-2;
+  }
+  
+  .prose li > ul,
+  .prose li > ol {
+    @apply my-2;
+  }
+  
+  /* 代码样式 */
+  .prose code {
+    @apply text-sm bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded font-mono;
+  }
+  
+  /* GitHub 风格代码块样式 */
   .prose pre {
-    @apply bg-gray-900 dark:bg-gray-800;
+    @apply rounded-lg p-4 overflow-x-auto my-4;
+    background-color: #f6f8fa; /* GitHub light background */
+    border: 1px solid #e1e4e8;
   }
   
   .prose pre code {
-    @apply text-gray-100;
+    @apply bg-transparent p-0;
+    color: #24292e; /* GitHub light text */
   }
   
+  /* GitHub 风格 Highlight.js 样式 - 亮色主题 */
+  .prose pre code.hljs {
+    background-color: #f6f8fa;
+    color: #24292e;
+  }
+  
+  .prose pre code.hljs * {
+    color: inherit;
+  }
+  
+  /* 关键字 - 红色 */
+  .prose .hljs-keyword,
+  .prose .hljs-selector-tag,
+  .prose .hljs-literal,
+  .prose .hljs-section,
+  .prose .hljs-link,
+  .prose .hljs-doctag {
+    color: #d73a49;
+    font-weight: 600;
+  }
+  
+  /* 字符串 - 深蓝色 */
+  .prose .hljs-string {
+    color: #032f62;
+  }
+  
+  /* 数字 - 蓝色 */
+  .prose .hljs-number {
+    color: #005cc5;
+  }
+  
+  /* 注释 - 灰色 */
+  .prose .hljs-comment,
+  .prose .hljs-quote {
+    color: #6a737d;
+    font-style: italic;
+  }
+  
+  /* 属性名 - 蓝色 */
+  .prose .hljs-attr,
+  .prose .hljs-attribute {
+    color: #005cc5;
+  }
+  
+  /* 函数名/类名 - 紫色 */
+  .prose .hljs-title,
+  .prose .hljs-title.function_,
+  .prose .hljs-class .hljs-title {
+    color: #6f42c1;
+  }
+  
+  /* 变量名 */
+  .prose .hljs-variable,
+  .prose .hljs-template-variable {
+    color: #e36209;
+  }
+  
+  /* 类型名 */
+  .prose .hljs-type {
+    color: #d73a49;
+  }
+  
+  /* 标点符号 */
+  .prose .hljs-punctuation {
+    color: #24292e;
+  }
+  
+  /* 内置函数 */
+  .prose .hljs-built_in,
+  .prose .hljs-builtin-name {
+    color: #005cc5;
+  }
+  
+  /* 正则表达式 */
+  .prose .hljs-regexp {
+    color: #032f62;
+  }
+  
+  /* 强调 */
+  .prose .hljs-strong {
+    font-weight: 600;
+  }
+  
+  .prose .hljs-emphasis {
+    font-style: italic;
+  }
+  
+  /* 暗色主题 - GitHub Dark */
+  .dark .prose pre {
+    background-color: #161b22;
+    border-color: #30363d;
+  }
+  
+  .dark .prose pre code {
+    color: #c9d1d9;
+  }
+  
+  .dark .prose pre code.hljs {
+    background-color: #161b22;
+    color: #c9d1d9;
+  }
+  
+  /* 暗色主题 - 关键字 - 红色 */
+  .dark .prose .hljs-keyword,
+  .dark .prose .hljs-selector-tag,
+  .dark .prose .hljs-literal,
+  .dark .prose .hljs-section,
+  .dark .prose .hljs-link,
+  .dark .prose .hljs-doctag {
+    color: #ff7b72;
+    font-weight: 600;
+  }
+  
+  /* 暗色主题 - 字符串 - 浅蓝色 */
+  .dark .prose .hljs-string {
+    color: #a5d6ff;
+  }
+  
+  /* 暗色主题 - 数字 - 蓝色 */
+  .dark .prose .hljs-number {
+    color: #79c0ff;
+  }
+  
+  /* 暗色主题 - 注释 - 灰色 */
+  .dark .prose .hljs-comment,
+  .dark .prose .hljs-quote {
+    color: #8b949e;
+    font-style: italic;
+  }
+  
+  /* 暗色主题 - 属性名 - 蓝色 */
+  .dark .prose .hljs-attr,
+  .dark .prose .hljs-attribute {
+    color: #79c0ff;
+  }
+  
+  /* 暗色主题 - 函数名/类名 - 紫色 */
+  .dark .prose .hljs-title,
+  .dark .prose .hljs-title.function_,
+  .dark .prose .hljs-class .hljs-title {
+    color: #d2a8ff;
+  }
+  
+  /* 暗色主题 - 变量名 */
+  .dark .prose .hljs-variable,
+  .dark .prose .hljs-template-variable {
+    color: #ffa657;
+  }
+  
+  /* 暗色主题 - 类型名 */
+  .dark .prose .hljs-type {
+    color: #ff7b72;
+  }
+  
+  /* 暗色主题 - 标点符号 */
+  .dark .prose .hljs-punctuation {
+    color: #c9d1d9;
+  }
+  
+  /* 暗色主题 - 内置函数 */
+  .dark .prose .hljs-built_in,
+  .dark .prose .hljs-builtin-name {
+    color: #79c0ff;
+  }
+  
+  /* 暗色主题 - 正则表达式 */
+  .dark .prose .hljs-regexp {
+    color: #a5d6ff;
+  }
+  
+  /* 图片样式 */
   .prose img {
-    @apply rounded-lg;
+    @apply rounded-lg my-4 max-w-full h-auto;
   }
   
+  /* 链接样式 */
   .prose a {
-    @apply text-blue-600 dark:text-blue-400 hover:underline;
+    @apply text-blue-600 dark:text-blue-400 hover:underline font-medium;
   }
   
+  /* 引用样式 */
   .prose blockquote {
-    @apply border-l-4 border-gray-300 dark:border-gray-600 pl-4 italic;
+    @apply border-l-4 border-gray-300 dark:border-gray-600 pl-4 italic my-4 text-gray-700 dark:text-gray-300;
   }
   
+  /* 水平线样式 */
+  .prose hr {
+    @apply my-8 border-t border-gray-300 dark:border-gray-600;
+  }
+  
+  /* 表格样式 */
   .prose table {
-    @apply border-collapse border border-gray-300 dark:border-gray-600;
+    @apply border-collapse border border-gray-300 dark:border-gray-600 my-4 w-full;
   }
   
   .prose th,
@@ -98,7 +339,27 @@
   }
   
   .prose th {
-    @apply bg-gray-100 dark:bg-gray-800 font-semibold;
+    @apply bg-gray-100 dark:bg-gray-800 font-semibold text-left;
+  }
+  
+  /* 强调样式 */
+  .prose strong {
+    @apply font-semibold;
+  }
+  
+  .prose em {
+    @apply italic;
+  }
+  
+  /* 删除线样式 */
+  .prose del {
+    @apply line-through;
+  }
+  
+  /* 内联代码在段落中 */
+  .prose p code,
+  .prose li code {
+    @apply bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-sm font-mono;
   }
 }
 
