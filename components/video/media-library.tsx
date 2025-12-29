@@ -96,7 +96,7 @@ export function MediaLibrary({ onSelectMedia, className }: MediaLibraryProps): J
       {mediaFiles.length === 0 && !uploading && (
         <div className="text-center py-12 text-muted-foreground">
           <p>暂无媒体文件</p>
-          <p className="text-sm mt-2">点击"上传文件"按钮开始上传</p>
+          <p className="text-sm mt-2">点击&quot;上传文件&quot;按钮开始上传</p>
         </div>
       )}
     </div>

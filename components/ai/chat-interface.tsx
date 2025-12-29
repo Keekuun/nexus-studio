@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Loading } from "@/components/ui/loading";
 import { ErrorMessage } from "@/components/ui/error-message";
@@ -8,6 +8,25 @@ import { useAIChat } from "@/lib/hooks/use-ai-chat";
 import { MessageContent } from "@/components/ai/message-content";
 import { cn } from "@/lib/utils/cn";
 import type { AIMessage } from "@/types/ai";
+
+/**
+ * 时间显示组件 - 避免 SSR hydration 错误
+ */
+function TimeDisplay({ timestamp, className }: { timestamp: number; className?: string }): JSX.Element {
+  const [timeString, setTimeString] = useState<string>("");
+
+  useEffect(() => {
+    // 只在客户端格式化时间
+    if (typeof window !== "undefined") {
+      setTimeString(new Date(timestamp).toLocaleTimeString());
+    } else {
+      // 服务端使用 ISO 格式
+      setTimeString(new Date(timestamp).toISOString().slice(11, 19));
+    }
+  }, [timestamp]);
+
+  return <p className={className}>{timeString || new Date(timestamp).toISOString().slice(11, 19)}</p>;
+}
 
 /**
  * AI聊天界面组件
@@ -28,6 +47,10 @@ export function ChatInterface(): JSX.Element {
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [defaultModel, setDefaultModel] = useState<string>("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const [isUserScrolling, setIsUserScrolling] = useState(false);
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // 加载可用模型列表
   useEffect(() => {
@@ -50,13 +73,110 @@ export function ChatInterface(): JSX.Element {
     loadModels();
   }, [currentModel, setCurrentModel]);
 
-  const scrollToBottom = (): void => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  /**
+   * 检查是否在底部附近（100px 内）
+   */
+  const isNearBottom = useCallback((): boolean => {
+    const container = messagesContainerRef.current;
+    if (!container) return true;
+    
+    const threshold = 100; // 距离底部的阈值（像素）
+    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+    return distanceFromBottom <= threshold;
+  }, []);
 
+  /**
+   * 滚动到底部
+   */
+  const scrollToBottom = useCallback((force = false): void => {
+    // 如果用户正在滚动或不在底部，且不是强制滚动，则不滚动
+    if (!force && (!shouldAutoScroll || isUserScrolling || !isNearBottom())) {
+      return;
+    }
+
+    // 使用 auto 而不是 smooth，减少晃眼
+    messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
+  }, [shouldAutoScroll, isUserScrolling, isNearBottom]);
+
+  /**
+   * 处理用户滚动事件
+   */
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    let scrollTimer: NodeJS.Timeout | null = null;
+
+    const handleScroll = (): void => {
+      // 标记用户正在滚动
+      setIsUserScrolling(true);
+      
+      // 检查是否在底部
+      const nearBottom = isNearBottom();
+      setShouldAutoScroll(nearBottom);
+
+      // 清除之前的定时器
+      if (scrollTimer) {
+        clearTimeout(scrollTimer);
+      }
+
+      // 如果用户停止滚动一段时间，重置状态
+      scrollTimer = setTimeout(() => {
+        setIsUserScrolling(false);
+        // 如果用户在底部，恢复自动滚动
+        if (nearBottom) {
+          setShouldAutoScroll(true);
+        }
+      }, 150);
+    };
+
+    container.addEventListener("scroll", handleScroll, { passive: true });
+
+    return () => {
+      container.removeEventListener("scroll", handleScroll);
+      if (scrollTimer) {
+        clearTimeout(scrollTimer);
+      }
+    };
+  }, [isNearBottom]);
+
+  /**
+   * 当消息更新时，智能滚动
+   */
+  useEffect(() => {
+    // 清除之前的定时器
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current);
+    }
+
+    // 延迟滚动，避免过于频繁
+    scrollTimeoutRef.current = setTimeout(() => {
+      // 如果是最后一条消息且正在流式输出，或者用户已经在底部，则滚动
+      const lastMessage = messages[messages.length - 1];
+      const isStreaming = lastMessage?.metadata?.isStreaming;
+      
+      if (isStreaming || shouldAutoScroll) {
+        scrollToBottom();
+      }
+    }, 50); // 50ms 防抖
+
+    return () => {
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+    };
+  }, [messages, shouldAutoScroll, scrollToBottom]);
+
+  /**
+   * 当发送新消息时，强制滚动到底部
+   */
+  useEffect(() => {
+    if (loading) {
+      // 开始加载时，强制滚动到底部
+      setShouldAutoScroll(true);
+      setTimeout(() => scrollToBottom(true), 100);
+    }
+  }, [loading, scrollToBottom]);
 
   const handleSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
@@ -92,7 +212,10 @@ export function ChatInterface(): JSX.Element {
           </Button>
         </div>
       </div>
-      <div className="flex-1 flex flex-col max-h-[500px] h-full overflow-y-auto p-4 space-y-4">
+      <div 
+        ref={messagesContainerRef}
+        className="flex-1 flex flex-col max-h-[500px] h-full overflow-y-auto p-4 space-y-4"
+      >
         {messages.length === 0 && (
           <div className="text-center text-muted-foreground py-12 flex-1 flex flex-col items-center justify-center">
             <p className="text-lg mb-2">开始与AI对话</p>
@@ -187,6 +310,20 @@ function ChatMessage({
   onRetry?: () => void;
 }): JSX.Element {
   const isUser = message.role === "user";
+  const [copied, setCopied] = useState(false);
+
+  /**
+   * 复制消息内容
+   */
+  const handleCopy = async (): Promise<void> => {
+    try {
+      await navigator.clipboard.writeText(message.content);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("复制失败:", err);
+    }
+  };
 
   return (
     <div
@@ -197,12 +334,53 @@ function ChatMessage({
     >
       <div
         className={cn(
-          "max-w-[80%] rounded-lg p-4 group",
+          "max-w-[80%] rounded-lg p-4 group relative",
           isUser
             ? "bg-primary text-primary-foreground"
             : "bg-muted text-foreground"
         )}
       >
+        {/* 复制按钮 - 右上角 */}
+        {!isUser && (
+          <button
+            onClick={handleCopy}
+            className="absolute top-2 right-2 p-1.5 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors z-10 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm shadow-sm"
+            title={copied ? "已复制" : "复制消息"}
+          >
+            {copied ? (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="text-green-500"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            ) : (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="text-gray-600 dark:text-gray-400"
+              >
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+              </svg>
+            )}
+          </button>
+        )}
         {isUser ? (
           <p className="whitespace-pre-wrap">{message.content}</p>
         ) : (
@@ -230,9 +408,7 @@ function ChatMessage({
         )}
 
         <div className="flex items-center justify-between mt-2">
-          <p className={cn("text-xs", isUser ? "text-primary-foreground/70" : "text-muted-foreground")}>
-            {new Date(message.timestamp).toLocaleTimeString()}
-          </p>
+          <TimeDisplay timestamp={message.timestamp} className={cn("text-xs", isUser ? "text-primary-foreground/70" : "text-muted-foreground")} />
           <div className="flex items-center gap-2">
             {message.metadata?.model && !isUser && (
               <p className={cn("text-xs", "text-muted-foreground")}>

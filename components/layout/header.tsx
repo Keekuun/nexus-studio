@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useAppStore } from "@/lib/stores/app-store";
 
@@ -39,16 +40,16 @@ export function Header(): JSX.Element {
         </div>
         <nav className="hidden md:flex gap-4">
           <Button variant="ghost" asChild>
-            <a href="/">首页</a>
+            <Link href="/">首页</Link>
           </Button>
           <Button variant="ghost" asChild>
-            <a href="/editor">编辑器</a>
+            <Link href="/editor">编辑器</Link>
           </Button>
           <Button variant="ghost" asChild>
-            <a href="/studio">工作室</a>
+            <Link href="/studio">工作室</Link>
           </Button>
           <Button variant="ghost" asChild>
-            <a href="/ai">AI助手</a>
+            <Link href="/ai">AI助手</Link>
           </Button>
         </nav>
       </div>

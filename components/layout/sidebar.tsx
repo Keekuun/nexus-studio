@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { cn } from "@/lib/utils/cn";
 import { useAppStore } from "@/lib/stores/app-store";
 import { Button } from "@/components/ui/button";
@@ -41,16 +42,16 @@ export function Sidebar({ className }: SidebarProps): JSX.Element {
         </div>
         <nav className="flex flex-col gap-2">
           <Button variant="ghost" className="justify-start" asChild>
-            <a href="/">首页</a>
+            <Link href="/">首页</Link>
           </Button>
           <Button variant="ghost" className="justify-start" asChild>
-            <a href="/editor">编辑器</a>
+            <Link href="/editor">编辑器</Link>
           </Button>
           <Button variant="ghost" className="justify-start" asChild>
-            <a href="/studio">工作室</a>
+            <Link href="/studio">工作室</Link>
           </Button>
           <Button variant="ghost" className="justify-start" asChild>
-            <a href="/ai">AI助手</a>
+            <Link href="/ai">AI助手</Link>
           </Button>
         </nav>
       </div>

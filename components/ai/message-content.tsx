@@ -168,8 +168,9 @@ function CodeBlock({ language, code, className, isReactNode = false }: CodeBlock
    * 渲染 Mermaid 流程图
    */
   useEffect(() => {
-    if (showPreview && previewType === "mermaid" && mermaidRef.current) {
-      const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
+    if (showPreview && previewType === "mermaid" && mermaidRef.current && typeof window !== "undefined") {
+      // 使用时间戳和随机数生成唯一 ID，避免 hydration 问题
+      const id = `mermaid-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       
       // 清空容器
       mermaidRef.current.innerHTML = "";

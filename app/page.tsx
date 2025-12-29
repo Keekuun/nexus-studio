@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 
 export default function Home(): JSX.Element {
   return (
-    <div className="flex flex-col items-center justify-center p-24">
+    <div className="flex-1 flex flex-col items-center justify-center p-24">
       <div className="z-10 max-w-5xl w-full items-center justify-center text-center space-y-8">
         <h1 className="text-6xl font-bold mb-4">
           Nexus Studio

@@ -120,7 +120,7 @@ export function RichTextEditor({
             size="sm"
             onClick={() => editor.chain().focus().toggleBlockquote().run()}
           >
-            "
+            &quot;
           </Button>
           <Button
             variant={editor.isActive("codeBlock") ? "default" : "ghost"}
