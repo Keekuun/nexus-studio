@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 export default function Home(): JSX.Element {
@@ -11,8 +12,12 @@ export default function Home(): JSX.Element {
           多模态创作平台 - 集成文本、音视频和AI技术
         </p>
         <div className="flex gap-4 justify-center">
-          <Button size="lg">开始创作</Button>
-          <Button size="lg" variant="outline">了解更多</Button>
+          <Button size="lg" asChild>
+            <Link href="/editor">开始创作</Link>
+          </Button>
+          <Button size="lg" variant="outline" asChild>
+            <Link href="/demos">案例演示</Link>
+          </Button>
         </div>
       </div>
     </div>

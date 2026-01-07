@@ -53,6 +53,9 @@ export function Sidebar({ className }: SidebarProps): JSX.Element {
           <Button variant="ghost" className="justify-start" asChild>
             <Link href="/ai">AI助手</Link>
           </Button>
+          <Button variant="ghost" className="justify-start" asChild>
+            <Link href="/demos">案例演示</Link>
+          </Button>
         </nav>
       </div>
     </aside>
