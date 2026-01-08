@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { CanvasAnnotation } from "@/components/canvas/canvas-annotation";
 import { MarkdownArticle } from "@/components/canvas/markdown-article";
@@ -14,7 +14,39 @@ export default function CanvasAnnotationPage(): JSX.Element {
   const articleRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fabricCanvasRef = useRef<any>(null); // 用于访问 fabric canvas 实例
+  const overlayRef = useRef<HTMLDivElement>(null); // 批注蒙层引用
   const [isMerging, setIsMerging] = useState(false);
+  const [screenshotMethod, setScreenshotMethod] = useState<"html2canvas" | "system" | "snapdom">("html2canvas");
+  const [systemScreenshotSupported, setSystemScreenshotSupported] = useState(false);
+  const [snapdomSupported, setSnapdomSupported] = useState(false);
+
+  // 在客户端检查系统截图支持（避免 hydration 错误）
+  useEffect(() => {
+    const supported =
+      typeof window !== "undefined" &&
+      !!navigator.mediaDevices?.getDisplayMedia &&
+      !!window.ImageCapture;
+    setSystemScreenshotSupported(supported);
+  }, []);
+
+  // 在客户端检查 snapdom 可用性（动态导入以避免 SSR 问题）
+  useEffect(() => {
+    let mounted = true;
+    const checkSnapdom = async (): Promise<void> => {
+      try {
+        if (typeof window === "undefined") return;
+        // 先乐观启用按钮，导入失败时仍可走降级逻辑
+        if (mounted) setSnapdomSupported(true);
+        await import("@zumer/snapdom");
+      } catch (e) {
+        console.warn("SnapDOM 动态导入失败，将在点击时降级 html2canvas:", e);
+      }
+    };
+    checkSnapdom();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   /**
    * 示例 markdown 文章内容
@@ -183,6 +215,100 @@ Hooks 让函数组件变得更加强大和灵活，是现代 React 开发的标�
   };
 
   /**
+   * 系统级截图（使用 getDisplayMedia API）
+   * @param hideOverlay - 是否隐藏批注蒙层
+   */
+  const systemScreenshot = async (hideOverlay = true): Promise<string> => {
+    // 检查浏览器支持
+    if (!navigator.mediaDevices?.getDisplayMedia) {
+      throw new Error("浏览器不支持屏幕捕获 API");
+    }
+
+    if (!window.ImageCapture) {
+      throw new Error("浏览器不支持 ImageCapture API（仅 Chrome/Edge 支持）");
+    }
+
+    let overlayElement: HTMLElement | null = null;
+    let originalDisplay = "";
+
+    try {
+      // 1. 如果需要隐藏蒙层，临时隐藏
+      if (hideOverlay && overlayRef.current) {
+        overlayElement = overlayRef.current;
+        originalDisplay = overlayElement.style.display;
+        overlayElement.style.display = "none";
+        // 等待 DOM 更新
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+      }
+
+      // 2. 调用系统屏幕捕获 API（弹出系统截图授权窗口）
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: {
+          cursor: "always" as any, // 显示鼠标光标（TypeScript 类型定义可能不完整）
+        } as any,
+      });
+
+      // 3. 创建视频轨道，捕获一帧画面
+      const videoTrack = stream.getVideoTracks()[0];
+      const imageCapture = new ImageCapture(videoTrack);
+      // ImageCapture.grabFrame() 返回 ImageBitmap，但类型定义可能不完整
+      const bitmap = await (imageCapture as any).grabFrame() as ImageBitmap;
+
+      // 4. 停止流（释放系统资源）
+      videoTrack.stop();
+      stream.getTracks().forEach((track) => track.stop());
+
+      // 5. 裁剪到目标元素区域
+      if (!articleRef.current) {
+        throw new Error("文章容器未找到");
+      }
+
+      const rect = articleRef.current.getBoundingClientRect();
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+
+      if (!ctx) {
+        throw new Error("无法创建画布上下文");
+      }
+
+      // 计算缩放比例（考虑系统截图的分辨率）
+      const scale = bitmap.width / window.screen.width;
+      const scrollX = window.scrollX || 0;
+      const scrollY = window.scrollY || 0;
+
+      canvas.width = rect.width;
+      canvas.height = rect.height;
+
+      // 裁剪出目标元素的区域（基于系统截图的像素）
+      ctx.drawImage(
+        bitmap,
+        (rect.left + scrollX) * scale,
+        (rect.top + scrollY) * scale,
+        rect.width * scale,
+        rect.height * scale,
+        0,
+        0,
+        rect.width,
+        rect.height
+      );
+
+      // 6. 恢复蒙层显示
+      if (overlayElement && originalDisplay !== undefined) {
+        overlayElement.style.display = originalDisplay;
+      }
+
+      // 返回系统级截图的 base64
+      return canvas.toDataURL("image/png", 1.0);
+    } catch (err) {
+      // 确保恢复蒙层显示（即使出错）
+      if (overlayElement && originalDisplay !== undefined) {
+        overlayElement.style.display = originalDisplay;
+      }
+      throw err;
+    }
+  };
+
+  /**
    * 转换 oklch 颜色为 rgb
    */
   const convertOklchToRgb = (oklchColor: string): string => {
@@ -207,9 +333,123 @@ Hooks 让函数组件变得更加强大和灵活，是现代 React 开发的标�
   };
 
   /**
-   * 将文章页面截图
+   * Blob 转 dataURL
+   */
+  const blobToDataUrl = (blob: Blob): Promise<string> =>
+    new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === "string") {
+          resolve(reader.result);
+        } else {
+          resolve("");
+        }
+      };
+      reader.readAsDataURL(blob);
+    });
+
+  /**
+   * 使用 SnapDOM 截图文章
+   */
+  const captureArticleWithSnapdom = async (): Promise<string> => {
+    if (!articleRef.current) {
+      throw new Error("文章容器未找到");
+    }
+
+    let overlayElement: HTMLElement | null = null;
+    let originalDisplay = "";
+
+    try {
+      if (overlayRef.current) {
+        overlayElement = overlayRef.current;
+        originalDisplay = overlayElement.style.display;
+        overlayElement.style.display = "none";
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+      }
+
+      const snapdomModule = await import("@zumer/snapdom");
+      const snapdom = snapdomModule?.snapdom;
+      if (!snapdom) {
+        throw new Error("SnapDOM 模块加载失败");
+      }
+
+      const result = await snapdom(articleRef.current, {
+        backgroundColor: "#ffffff",
+      });
+
+      let dataUrl = "";
+
+      // 优先使用 toDataURL（若存在）
+      if (typeof result?.toDataURL === "function") {
+        dataUrl = await result.toDataURL("image/png");
+      }
+
+      // 尝试 toPng
+      if (!dataUrl && typeof result?.toPng === "function") {
+        const pngResult = await result.toPng();
+        if (typeof pngResult === "string") {
+          dataUrl = pngResult;
+        } else if (pngResult instanceof HTMLImageElement && pngResult.src) {
+          dataUrl = pngResult.src;
+        } else if (pngResult instanceof Blob) {
+          dataUrl = await blobToDataUrl(pngResult);
+        }
+      }
+
+      // 尝试 toBlob
+      if (!dataUrl && typeof result?.toBlob === "function") {
+        const blob = await result.toBlob();
+        if (blob) {
+          dataUrl = await blobToDataUrl(blob);
+        }
+      }
+
+      if (!dataUrl) {
+        throw new Error("SnapDOM 未返回有效的图片数据");
+      }
+
+      return dataUrl;
+    } finally {
+      if (overlayElement) {
+        overlayElement.style.display = originalDisplay;
+      }
+    }
+  };
+
+  /**
+   * 将文章页面截图（支持多种方式）
    */
   const captureArticle = async (): Promise<string> => {
+    if (!articleRef.current) {
+      throw new Error("文章容器未找到");
+    }
+
+    // 根据选择的截图方式执行
+    switch (screenshotMethod) {
+      case "system":
+        try {
+          return await systemScreenshot(true); // 隐藏蒙层
+        } catch (err) {
+          console.warn("系统截图失败，降级到 html2canvas:", err);
+          return captureArticleWithHtml2Canvas();
+        }
+      case "snapdom":
+        try {
+          return await captureArticleWithSnapdom();
+        } catch (err) {
+          console.warn("SnapDOM 截图失败，降级到 html2canvas:", err);
+          return captureArticleWithHtml2Canvas();
+        }
+      case "html2canvas":
+      default:
+        return captureArticleWithHtml2Canvas();
+    }
+  };
+
+  /**
+   * 使用 html2canvas 截图文章
+   */
+  const captureArticleWithHtml2Canvas = async (): Promise<string> => {
     if (!articleRef.current) {
       throw new Error("文章容器未找到");
     }
@@ -250,7 +490,7 @@ Hooks 让函数组件变得更加强大和灵活，是现代 React 开发的标�
           sheet.remove();
         });
         
-        // 第二步：只转换颜色相关的属性，保留原有的布局样式
+        // 第二步：转换关键样式（颜色 + 段落间距），尽量保持原有布局
         const allElements = clonedDoc.querySelectorAll("*");
         const originalElements = articleRef.current?.querySelectorAll("*") || [];
         
@@ -264,7 +504,7 @@ Hooks 让函数组件变得更加强大和灵活，是现代 React 开发的标�
             // 获取原始元素的计算样式
             const computedStyle = window.getComputedStyle(originalElement);
             
-            // 只转换颜色相关的属性，避免破坏布局
+            // 颜色相关属性
             const colorProperties = [
               'backgroundColor',
               'color',
@@ -276,6 +516,21 @@ Hooks 让函数组件变得更加强大和灵活，是现代 React 开发的标�
               'outlineColor',
               'textDecorationColor',
               'columnRuleColor',
+            ];
+
+            // 段落和排版相关属性（解决 html2canvas 截图段落间距缺失问题）
+            const spacingProperties = [
+              'margin',
+              'marginTop',
+              'marginBottom',
+              'padding',
+              'paddingTop',
+              'paddingBottom',
+              'lineHeight',
+              'fontSize',
+              'fontFamily',
+              'fontWeight',
+              'fontStyle',
             ];
             
             colorProperties.forEach((prop) => {
@@ -305,10 +560,9 @@ Hooks 让函数组件变得更加强大和灵活，是现代 React 开发的标�
                 // 忽略单个属性错误
               }
             });
-            
-            // 保留字体相关属性（但不强制覆盖，避免破坏布局）
-            const fontProperties = ['fontSize', 'fontFamily', 'fontWeight', 'fontStyle'];
-            fontProperties.forEach((prop) => {
+
+            // 应用段落与排版相关属性，保持行距和间距
+            spacingProperties.forEach((prop) => {
               try {
                 const value = computedStyle.getPropertyValue(prop);
                 if (value && !htmlElement.style.getPropertyValue(prop)) {
@@ -523,16 +777,54 @@ Hooks 让函数组件变得更加强大和灵活，是现代 React 开发的标�
             Markdown 文章展示 + Fabric.js 画布批注 + 图片融合功能
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button onClick={handleCaptureArticle} variant="outline">
-            截图文章
-          </Button>
-          <Button onClick={handleSaveCanvas} variant="outline">
-            保存批注
-          </Button>
-          <Button onClick={handleMerge} disabled={isMerging}>
-            {isMerging ? "融合中..." : "融合图片"}
-          </Button>
+        <div className="flex flex-col gap-2">
+          <div className="flex gap-2">
+            <Button onClick={handleCaptureArticle} variant="outline">
+              截图文章
+            </Button>
+            <Button onClick={handleSaveCanvas} variant="outline">
+              保存批注
+            </Button>
+            <Button onClick={handleMerge} disabled={isMerging}>
+              {isMerging ? "融合中..." : "融合图片"}
+            </Button>
+          </div>
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-muted-foreground">截图方式：</span>
+            <Button
+              variant={screenshotMethod === "html2canvas" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setScreenshotMethod("html2canvas")}
+            >
+              html2canvas
+            </Button>
+            <Button
+              variant={screenshotMethod === "snapdom" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setScreenshotMethod("snapdom")}
+              disabled={!snapdomSupported}
+              title={
+                snapdomSupported
+                  ? "使用 SnapDOM 截图（实验）"
+                  : "SnapDOM 未加载或浏览器不支持"
+              }
+            >
+              SnapDOM
+            </Button>
+            <Button
+              variant={screenshotMethod === "system" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setScreenshotMethod("system")}
+              disabled={!systemScreenshotSupported}
+              title={
+                !systemScreenshotSupported
+                  ? "浏览器不支持系统截图（仅 Chrome/Edge 支持）"
+                  : "需要授权屏幕共享权限"
+              }
+            >
+              系统截图
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -559,7 +851,7 @@ Hooks 让函数组件变得更加强大和灵活，是现代 React 开发的标�
           </div>
 
           {/* 画布蒙层 - 覆盖在文章上方，完全匹配文章容器尺寸 */}
-          <div className="absolute inset-0 pointer-events-none">
+          <div ref={overlayRef} className="absolute inset-0 pointer-events-none">
             <CanvasAnnotation
               canvasRef={canvasRef}
               articleRef={articleRef}

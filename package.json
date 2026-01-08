@@ -22,6 +22,7 @@
     "@tiptap/extension-collaboration-cursor": "^2.26.2",
     "@tiptap/react": "^3.13.0",
     "@tiptap/starter-kit": "^3.13.0",
+    "@zumer/snapdom": "^2.0.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "fabric": "^5.3.0",
