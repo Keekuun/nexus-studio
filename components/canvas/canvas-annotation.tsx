@@ -46,6 +46,58 @@ export function CanvasAnnotation({
   const [isDrawing, setIsDrawing] = useState(false);
 
   /**
+   * 在 fabric canvas 上保存当前工具，供“画布层实例”（showToolbarOnly=false）在事件回调中读取。
+   * 之所以不用 React state 共享，是为了避免多实例（工具栏/画布）之间不同步导致行为错乱。
+   */
+  const setCanvasToolFlag = (canvas: any, nextTool: ToolType): void => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (canvas as any).__nexusTool = nextTool;
+  };
+
+  const getCanvasToolFlag = (canvas: any): ToolType | null => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const value = (canvas as any).__nexusTool;
+    return value ?? null;
+  };
+
+  const createCircleCursor = (diameterPx: number, stroke = "#111827"): string => {
+    // clamp，避免过大导致 cursor data-uri 超长/不稳定
+    const size = Math.max(10, Math.min(80, Math.round(diameterPx)));
+    const r = Math.max(2, Math.floor(size / 2) - 1);
+    const cx = Math.floor(size / 2);
+    const cy = Math.floor(size / 2);
+
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${stroke}" stroke-width="2"/><circle cx="${cx}" cy="${cy}" r="1" fill="${stroke}"/></svg>`;
+    const encoded = encodeURIComponent(svg)
+      .replace(/'/g, "%27")
+      .replace(/"/g, "%22");
+    // hotspot 放在中心点
+    return `url("data:image/svg+xml,${encoded}") ${cx} ${cy}, auto`;
+  };
+
+  const applyCursorForTool = (canvas: any, currentTool: ToolType, currentWidth: number): void => {
+    try {
+      if (currentTool === "eraser") {
+        const cursor = createCircleCursor(currentWidth);
+        canvas.defaultCursor = cursor;
+        canvas.hoverCursor = cursor;
+        canvas.freeDrawingCursor = cursor;
+      } else if (currentTool === "pen" || currentTool === "brush") {
+        canvas.defaultCursor = "crosshair";
+        canvas.hoverCursor = "crosshair";
+        canvas.freeDrawingCursor = "crosshair";
+      } else {
+        // 非绘制类工具使用默认指针
+        canvas.defaultCursor = "default";
+        canvas.hoverCursor = "move";
+        canvas.freeDrawingCursor = "default";
+      }
+    } catch {
+      // 忽略：不同 fabric 版本字段可能不一致
+    }
+  };
+
+  /**
    * 初始化 Fabric.js 画布
    */
   useEffect(() => {
@@ -84,14 +136,35 @@ export function CanvasAnnotation({
       });
 
       fabricCanvasRef.current = canvas;
+      setCanvasToolFlag(canvas, "pen");
+      applyCursorForTool(canvas, "pen", brushWidth);
 
       // 设置默认画笔样式
       canvas.freeDrawingBrush.width = brushWidth;
       canvas.freeDrawingBrush.color = brushColor;
 
       // 监听绘制开始
-      canvas.on("path:created", () => {
+      canvas.on("path:created", (e: any) => {
         setIsDrawing(true);
+
+        // 橡皮擦：
+        // - Fabric 5.x 优先使用内置 EraserBrush（更符合预期：拖动时不会“先画线再消失”）
+        // - 若 EraserBrush 不可用，再退回到 destination-out 的兼容逻辑
+        const currentTool = getCanvasToolFlag(canvas);
+        const hasNativeEraserBrush = !!(fabric && (fabric as any).EraserBrush);
+        if (!hasNativeEraserBrush && currentTool === "eraser" && e?.path) {
+          try {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (e.path as any).globalCompositeOperation = "destination-out";
+            // 保证不被选中/拖拽，避免用户误操作“橡皮路径对象”
+            e.path.selectable = false;
+            e.path.evented = false;
+            // 颜色无所谓，但设置为不透明，避免部分实现下 alpha 导致擦除不明显
+            e.path.stroke = "rgba(0,0,0,1)";
+          } catch {
+            // 忽略：不同 fabric 版本实现细节不同
+          }
+        }
       });
 
       // 监听绘制结束
@@ -153,8 +226,15 @@ export function CanvasAnnotation({
     const canvas = fabricCanvasRef.current;
     if (canvas.isDrawingMode) {
       canvas.freeDrawingBrush.width = brushWidth;
-      canvas.freeDrawingBrush.color = brushColor;
+      const currentTool = getCanvasToolFlag(canvas) ?? tool;
+      // 橡皮擦不需要颜色（擦除依赖 destination-out），避免“透明色=橡皮擦”的误解
+      if (currentTool !== "eraser") {
+        canvas.freeDrawingBrush.color = brushColor;
+      }
     }
+    // 同步 cursor（特别是橡皮擦要随粗细变化）
+    const currentTool = getCanvasToolFlag(canvas) ?? tool;
+    applyCursorForTool(canvas, currentTool, brushWidth);
   }, [brushWidth, brushColor, showToolbarOnly, fabricCanvasRef]);
 
   /**
@@ -238,6 +318,8 @@ export function CanvasAnnotation({
 
     setTool(newTool);
     const canvas = fabricCanvasRef.current;
+    setCanvasToolFlag(canvas, newTool);
+    applyCursorForTool(canvas, newTool, brushWidth);
 
     // 完全禁用绘制模式，确保可以正常选择和操作对象
     canvas.isDrawingMode = false;
@@ -250,19 +332,61 @@ export function CanvasAnnotation({
       case "pen":
       case "brush":
         canvas.isDrawingMode = true;
+        // 从橡皮擦切回画笔时，确保回到 PencilBrush（避免仍沿用 EraserBrush）
+        if (fabric && (fabric as any).PencilBrush) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          canvas.freeDrawingBrush = new (fabric as any).PencilBrush(canvas);
+        }
         canvas.freeDrawingBrush.width = brushWidth;
         canvas.freeDrawingBrush.color = brushColor;
-        // 重置橡皮擦的合成操作
-        if ("globalCompositeOperation" in canvas.freeDrawingBrush) {
-          (canvas.freeDrawingBrush as any).globalCompositeOperation = "source-over";
-        }
         break;
       case "eraser":
         canvas.isDrawingMode = true;
-        canvas.freeDrawingBrush.width = brushWidth;
-        // 使用全局合成操作实现橡皮擦效果
-        if ("globalCompositeOperation" in canvas.freeDrawingBrush) {
-          (canvas.freeDrawingBrush as any).globalCompositeOperation = "destination-out";
+        // 优先使用 Fabric 原生 EraserBrush（体验更好：拖动时不会出现“画线后消失”的假象）
+        if (fabric && (fabric as any).EraserBrush) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const eraserBrush = new (fabric as any).EraserBrush(canvas);
+          eraserBrush.width = brushWidth;
+
+          // 体验优化（参考 PS）：不显示“橡皮擦轨迹线”，只显示擦除效果 + 光标圆圈
+          // Fabric 默认会在 contextTop 上渲染一个黑色轨迹（用于复杂 erasable 场景的视觉遮罩），
+          // 我们的场景是“仅在批注层擦除”，不需要这层轨迹。
+          try {
+            const pencilRender = (fabric as any).PencilBrush?.prototype?._render;
+            if (typeof pencilRender === "function") {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (eraserBrush as any)._render = function () {
+                // 只在主画布上执行 destination-out 擦除
+                if (!(this as any).inverted) {
+                  const ctx = (this as any).canvas.getContext();
+                  pencilRender.call(this, ctx);
+                }
+                // 清空顶层轨迹，避免“画线”的视觉干扰
+                (this as any).canvas.clearContext((this as any).canvas.contextTop);
+              };
+            }
+          } catch {
+            // 忽略：仅影响预览轨迹，不影响擦除功能
+          }
+
+          // 轨迹边缘更圆润（更接近 PS）
+          try {
+            eraserBrush.strokeLineCap = "round";
+            eraserBrush.strokeLineJoin = "round";
+          } catch {
+            // 忽略
+          }
+
+          canvas.freeDrawingBrush = eraserBrush;
+        } else {
+          // 降级：使用 PencilBrush + destination-out（path:created 里会处理）
+          if (fabric && (fabric as any).PencilBrush) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            canvas.freeDrawingBrush = new (fabric as any).PencilBrush(canvas);
+          }
+          canvas.freeDrawingBrush.width = brushWidth;
+          // 这里设置为不透明，避免 destination-out 擦除力度不足
+          canvas.freeDrawingBrush.color = "rgba(0,0,0,1)";
         }
         break;
       case "text":
@@ -396,6 +520,7 @@ export function CanvasAnnotation({
 
   // 如果只显示工具栏，返回工具栏组件
   if (showToolbarOnly) {
+    const brushWidthMax = tool === "eraser" ? 60 : 20;
     return (
       <div className="flex flex-wrap items-center gap-2 p-2 bg-gray-50 rounded-lg border border-gray-200">
         <div className="flex gap-1">
@@ -456,12 +581,16 @@ export function CanvasAnnotation({
         </div>
 
         <div className="flex items-center gap-2">
-          <label className="text-sm font-medium">颜色:</label>
+          <label className="text-sm font-medium">
+            {tool === "eraser" ? "颜色(橡皮擦无效):" : "颜色:"}
+          </label>
           <input
             type="color"
             value={brushColor}
             onChange={(e) => setBrushColor(e.target.value)}
-            className="w-10 h-8 rounded border border-gray-300 cursor-pointer"
+            disabled={tool === "eraser"}
+            title={tool === "eraser" ? "橡皮擦不需要颜色（擦除通过合成模式实现）" : "选择画笔颜色"}
+            className="w-10 h-8 rounded border border-gray-300 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
           />
         </div>
 
@@ -470,7 +599,7 @@ export function CanvasAnnotation({
           <input
             type="range"
             min="1"
-            max="20"
+            max={brushWidthMax}
             value={brushWidth}
             onChange={(e) => setBrushWidth(Number(e.target.value))}
             className="w-20"

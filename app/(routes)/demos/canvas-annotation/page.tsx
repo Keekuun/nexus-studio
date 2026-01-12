@@ -246,7 +246,10 @@ Hooks 让函数组件变得更加强大和灵活，是现代 React 开发的标�
   ): Promise<string> => {
     return new Promise((resolve, reject) => {
       // 检查是否是Fabric.js Canvas实例
-      const isFabricCanvas = canvas && typeof canvas.getObjects === 'function' && typeof canvas.renderAll === 'function';
+      const isFabricCanvas =
+        canvas &&
+        typeof canvas.getObjects === "function" &&
+        typeof canvas.renderAll === "function";
 
       if (isFabricCanvas) {
         const fabricCanvas = canvas;
@@ -258,76 +261,39 @@ Hooks 让函数组件变得更加强大和灵活，是现代 React 开发的标�
           // 即使没有对象，也返回一个透明图片，但先检查canvas状态
         }
 
-        // 确保画布已完全渲染（多次渲染确保所有对象都显示）
-        fabricCanvas.renderAll();
+        // 关键：导出时不要影响页面上正在显示的 canvas（否则会出现“融合时批注闪一下/消失”）
+        // 使用 fabric 的 toDataURL + multiplier 在内存中生成导出图层。
+        try {
+          const dpr = window.devicePixelRatio || 1;
+          const fabricWidth = fabricCanvas.getWidth();
+          const targetDisplayWidth = targetWidth || fabricWidth;
 
-        // 等待渲染完成
-        requestAnimationFrame(() => {
+          // html2canvas 的输出像素通常是 displayWidth * dpr，所以这里对齐
+          const multiplier = (targetDisplayWidth / fabricWidth) * dpr;
+
+          // 先渲染一次，确保最新状态（不修改尺寸/视口）
           fabricCanvas.renderAll();
 
-          // 获取设备像素比
-          const dpr = window.devicePixelRatio || 1;
+          requestAnimationFrame(() => {
+            fabricCanvas.renderAll();
 
-          // 获取目标尺寸
-          const displayWidth = targetWidth || fabricCanvas.getWidth();
-          const displayHeight = targetHeight || fabricCanvas.getHeight();
+            const dataUrl: string = fabricCanvas.toDataURL({
+              format: "png",
+              multiplier,
+              enableRetinaScaling: false,
+            });
 
-          // 使用 fabric.js 的 toCanvasElement 方法获取正确渲染的canvas
-          // 这比直接操作 lowerCanvasEl 更可靠
-          let canvasElement: HTMLCanvasElement;
-
-          try {
-            // 如果需要调整尺寸，使用 toCanvasElement
-            if (targetWidth && targetHeight) {
-              const scaleX = displayWidth / fabricCanvas.getWidth();
-              const scaleY = displayHeight / fabricCanvas.getHeight();
-              canvasElement = fabricCanvas.toCanvasElement(scaleX, scaleY);
-            } else {
-              // 否则直接使用底层canvas
-              canvasElement = fabricCanvas.lowerCanvasEl;
-            }
-
-            if (!canvasElement) {
-              reject(new Error("无法获取 fabric canvas 元素"));
+            if (!dataUrl) {
+              reject(new Error("画布导出失败"));
               return;
             }
 
-            // 创建临时画布以应用 DPR 缩放
-            const tempCanvas = document.createElement("canvas");
-            const tempCtx = tempCanvas.getContext("2d");
-
-            if (!tempCtx) {
-              reject(new Error("无法创建画布上下文"));
-              return;
-            }
-
-            // 设置临时画布的实际分辨率（考虑 DPR）
-            tempCanvas.width = displayWidth * dpr;
-            tempCanvas.height = displayHeight * dpr;
-
-            // 缩放上下文以适配 DPR
-            tempCtx.scale(dpr, dpr);
-
-            // 绘制 fabric canvas 内容
-            tempCtx.drawImage(canvasElement, 0, 0, displayWidth, displayHeight);
-
-            // 生成截图
-            tempCanvas.toBlob(
-              (blob) => {
-                if (blob) {
-                  const url = URL.createObjectURL(blob);
-                  resolve(url);
-                } else {
-                  reject(new Error("画布转换为 Blob 失败"));
-                }
-              },
-              "image/png"
-            );
-          } catch (error) {
-            console.error("获取 fabric canvas 内容失败:", error);
-            reject(new Error("获取 fabric canvas 内容失败"));
-          }
-        });
+            resolve(dataUrl);
+          });
+        } catch (error) {
+          console.error("获取 fabric canvas 内容失败:", error);
+          reject(new Error("获取 fabric canvas 内容失败"));
+        }
         return;
       }
 
@@ -351,17 +317,12 @@ Hooks 让函数组件变得更加强大和灵活，是现代 React 开发的标�
       tempCtx.scale(dpr, dpr);
       tempCtx.drawImage(htmlCanvas, 0, 0, displayWidth, displayHeight);
 
-      tempCanvas.toBlob(
-        (blob) => {
-          if (blob) {
-            const url = URL.createObjectURL(blob);
-            resolve(url);
-          } else {
-            reject(new Error("画布转换为 Blob 失败"));
-          }
-        },
-        "image/png"
-      );
+      try {
+        const dataUrl = tempCanvas.toDataURL("image/png");
+        resolve(dataUrl);
+      } catch {
+        reject(new Error("画布转换失败"));
+      }
     });
   };
 
@@ -510,20 +471,10 @@ Hooks 让函数组件变得更加强大和灵活，是现代 React 开发的标�
     // 先确保视频停留在首帧，获取快照映射
     const videoSnapshotMap = await prepareVideoSnapshots();
 
-    let overlayElement: HTMLElement | null = null;
-    let originalDisplay = "";
     const videoReplacements: Array<{ video: HTMLVideoElement; img: HTMLImageElement }> = [];
 
     try {
-      // 1. 隐藏批注蒙层
-      if (overlayRef.current) {
-        overlayElement = overlayRef.current;
-        originalDisplay = overlayElement.style.display;
-        overlayElement.style.display = "none";
-        await new Promise((resolve) => requestAnimationFrame(resolve));
-      }
-
-      // 2. 将视频元素替换为快照图片（SnapDOM 无法处理视频）
+      // 1. 将视频元素替换为快照图片（SnapDOM 无法处理 video，常见表现是黑块）
       const videos = Array.from(
         articleRef.current.querySelectorAll<HTMLVideoElement>("video")
       );
@@ -564,7 +515,9 @@ Hooks 让函数组件变得更加强大和灵活，是现代 React 开发的标�
       await new Promise((resolve) => requestAnimationFrame(resolve));
       await new Promise((resolve) => setTimeout(resolve, 100));
 
-      // 3. 调用 SnapDOM 截图
+      // 2. 调用 SnapDOM 截图
+      // 注意：这里截图目标是 articleRef.current，批注蒙层 overlayRef 是兄弟节点，
+      // 不需要（也不应该）为了“排除批注”而隐藏 overlay，否则融合时会造成页面批注闪烁/消失。
       const snapdomModule = await import("@zumer/snapdom");
       const snapdom = snapdomModule?.snapdom;
       if (!snapdom) {
@@ -608,18 +561,13 @@ Hooks 让函数组件变得更加强大和灵活，是现代 React 开发的标�
 
       return dataUrl;
     } finally {
-      // 4. 恢复视频元素
+      // 3. 恢复视频元素
       videoReplacements.forEach(({ video, img }) => {
         if (video.parentNode && img.parentNode) {
           video.style.display = ""; // 恢复显示
           img.parentNode.removeChild(img); // 移除临时图片
         }
       });
-
-      // 5. 恢复批注蒙层
-      if (overlayElement && originalDisplay !== undefined) {
-        overlayElement.style.display = originalDisplay;
-      }
     }
   };
 
