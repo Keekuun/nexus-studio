@@ -33,7 +33,13 @@ export function CanvasAnnotation({
   fabricCanvasRef: externalFabricCanvasRef,
 }: CanvasAnnotationProps): JSX.Element {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const fabricCanvasRef = useRef<any>(null);
+  const internalFabricCanvasRef = useRef<any>(null);
+  // 工具栏与画布层需要共享同一个 fabric canvas 实例：
+  // - 画布层负责初始化/销毁
+  // - 工具栏层只负责操作（不允许重复初始化）
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const fabricCanvasRef = (externalFabricCanvasRef ??
+    internalFabricCanvasRef) as React.MutableRefObject<any>;
   const [tool, setTool] = useState<ToolType>("pen");
   const [brushWidth, setBrushWidth] = useState(3);
   const [brushColor, setBrushColor] = useState("#ff0000");
@@ -43,6 +49,9 @@ export function CanvasAnnotation({
    * 初始化 Fabric.js 画布
    */
   useEffect(() => {
+    // 只允许“画布层实例”（showToolbarOnly=false）初始化 fabric，
+    // 否则会在同一个 <canvas> 上重复 new fabric.Canvas(...)，导致对象丢失。
+    if (showToolbarOnly) return;
     if (!canvasRef.current) return;
 
     // 动态加载 fabric
@@ -53,6 +62,9 @@ export function CanvasAnnotation({
       }
 
       if (!canvasRef.current || !fabric) return;
+
+      // 如果已经初始化过，直接退出，避免重复初始化覆盖对象
+      if (fabricCanvasRef.current) return;
 
       // 获取文章容器的尺寸，如果没有则使用默认值（后续会通过 syncSize 更新）
       let initialWidth = 600;
@@ -72,11 +84,6 @@ export function CanvasAnnotation({
       });
 
       fabricCanvasRef.current = canvas;
-      
-      // 如果提供了外部 ref，同步 fabric canvas 实例
-      if (externalFabricCanvasRef) {
-        externalFabricCanvasRef.current = canvas;
-      }
 
       // 设置默认画笔样式
       canvas.freeDrawingBrush.width = brushWidth;
@@ -134,24 +141,28 @@ export function CanvasAnnotation({
         }
       }
     };
-  }, [canvasRef]);
+  }, [canvasRef, showToolbarOnly, articleRef, brushWidth, brushColor, fabricCanvasRef]);
 
   /**
    * 更新画笔样式
    */
   useEffect(() => {
+    // 工具栏实例负责同步画笔样式；画布层实例不要写回默认值，避免覆盖用户设置
+    if (!showToolbarOnly) return;
     if (!fabricCanvasRef.current) return;
     const canvas = fabricCanvasRef.current;
     if (canvas.isDrawingMode) {
       canvas.freeDrawingBrush.width = brushWidth;
       canvas.freeDrawingBrush.color = brushColor;
     }
-  }, [brushWidth, brushColor]);
+  }, [brushWidth, brushColor, showToolbarOnly, fabricCanvasRef]);
 
   /**
    * 同步画布尺寸与文章容器尺寸
    */
   useEffect(() => {
+    // 只让画布层实例负责尺寸同步，工具栏实例不要参与
+    if (showToolbarOnly) return;
     if (!fabricCanvasRef.current || !articleRef.current) return;
 
     const syncSize = () => {
@@ -210,7 +221,7 @@ export function CanvasAnnotation({
         resizeObserver.disconnect();
       }
     };
-  }, [articleRef]);
+  }, [articleRef, showToolbarOnly, fabricCanvasRef]);
 
   /**
    * 切换工具
@@ -344,6 +355,8 @@ export function CanvasAnnotation({
    * 绑定点击事件
    */
   useEffect(() => {
+    // 只由工具栏实例根据 tool 状态绑定/解绑点击创建逻辑，画布层实例不参与
+    if (!showToolbarOnly) return;
     if (!fabricCanvasRef.current) return;
 
     const canvas = fabricCanvasRef.current;
@@ -359,7 +372,7 @@ export function CanvasAnnotation({
     return () => {
       canvas.off("mouse:down", handleCanvasClick);
     };
-  }, [tool, brushColor, brushWidth]);
+  }, [tool, brushColor, brushWidth, showToolbarOnly, fabricCanvasRef]);
 
   /**
    * 清空画布
@@ -390,43 +403,55 @@ export function CanvasAnnotation({
             size="sm"
             variant={tool === "pen" ? "default" : "outline"}
             onClick={() => handleToolChange("pen")}
+            title="画笔"
           >
-            画笔
+            <span aria-hidden>✏️</span>
+            <span className="sr-only">画笔</span>
           </Button>
           <Button
             size="sm"
             variant={tool === "brush" ? "default" : "outline"}
             onClick={() => handleToolChange("brush")}
+            title="刷子"
           >
-            刷子
+            <span aria-hidden>🖌️</span>
+            <span className="sr-only">刷子</span>
           </Button>
           <Button
             size="sm"
             variant={tool === "eraser" ? "default" : "outline"}
             onClick={() => handleToolChange("eraser")}
+            title="橡皮擦"
           >
-            橡皮擦
+            <span aria-hidden>🧽</span>
+            <span className="sr-only">橡皮擦</span>
           </Button>
           <Button
             size="sm"
             variant={tool === "text" ? "default" : "outline"}
             onClick={() => handleToolChange("text")}
+            title="文本"
           >
-            文本
+            <span aria-hidden>🔤</span>
+            <span className="sr-only">文本</span>
           </Button>
           <Button
             size="sm"
             variant={tool === "rectangle" ? "default" : "outline"}
             onClick={() => handleToolChange("rectangle")}
+            title="矩形"
           >
-            矩形
+            <span aria-hidden>▭</span>
+            <span className="sr-only">矩形</span>
           </Button>
           <Button
             size="sm"
             variant={tool === "circle" ? "default" : "outline"}
             onClick={() => handleToolChange("circle")}
+            title="圆形"
           >
-            圆形
+            <span aria-hidden>◯</span>
+            <span className="sr-only">圆形</span>
           </Button>
         </div>
 
@@ -454,11 +479,13 @@ export function CanvasAnnotation({
         </div>
 
         <div className="flex gap-1">
-          <Button size="sm" variant="outline" onClick={handleUndo}>
-            撤销
+          <Button size="sm" variant="outline" onClick={handleUndo} title="撤销">
+            <span aria-hidden>↩️</span>
+            <span className="sr-only">撤销</span>
           </Button>
-          <Button size="sm" variant="outline" onClick={handleClear}>
-            清空
+          <Button size="sm" variant="outline" onClick={handleClear} title="清空">
+            <span aria-hidden>🗑️</span>
+            <span className="sr-only">清空</span>
           </Button>
         </div>
       </div>

@@ -97,6 +97,14 @@ export function MarkdownArticle({ content }: MarkdownArticleProps): JSX.Element 
               />
             </div>
           ),
+          // 自定义视频样式，确保可播放
+          video: ({ ...props }) => (
+            <video
+              {...props}
+              controls
+              className="w-full rounded-lg border border-gray-200 shadow-sm"
+            />
+          ),
         }}
       >
         {content}

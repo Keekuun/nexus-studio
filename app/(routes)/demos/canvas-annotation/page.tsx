@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { CanvasAnnotation } from "@/components/canvas/canvas-annotation";
 import { MarkdownArticle } from "@/components/canvas/markdown-article";
@@ -19,6 +19,9 @@ export default function CanvasAnnotationPage(): JSX.Element {
   const [screenshotMethod, setScreenshotMethod] = useState<"html2canvas" | "system" | "snapdom">("html2canvas");
   const [systemScreenshotSupported, setSystemScreenshotSupported] = useState(false);
   const [snapdomSupported, setSnapdomSupported] = useState(false);
+  const [isAnnotating, setIsAnnotating] = useState(true); // 批注模式开关：开时显示画布，关时便于操作视频控件
+  const sleep = (ms: number): Promise<void> =>
+    new Promise((resolve) => setTimeout(resolve, ms));
 
   // 在客户端检查系统截图支持（避免 hydration 错误）
   useEffect(() => {
@@ -115,98 +118,246 @@ Hooks 让函数组件变得更加强大和灵活，是现代 React 开发的标�
 > 提示：记住 Hooks 的规则：
 > - 只在最顶层调用 Hooks
 > - 只在 React 函数中调用 Hooks
+
+## 示例视频
+
+下面是一段示例教学视频（可播放、可暂停）：
+
+<div class="w-full aspect-video">
+  <video
+    controls
+    width="100%"
+    src="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4"
+    crossorigin="anonymous"
+  >
+    您的浏览器不支持 video 标签。
+  </video>
+</div>
 `;
+
+  // 固定渲染的文章节点，避免切换状态时重建 DOM 导致视频回到首帧
+  const memoizedArticle = useMemo(() => {
+    return <MarkdownArticle content={sampleMarkdown} />;
+  }, []);
+
+  /**
+   * 捕获视频首帧，返回 dataURL，并给视频打上 data-video-snapshot-id，便于 html2canvas 替换
+   */
+  const captureVideoFirstFrame = async (
+    video: HTMLVideoElement,
+    id: string
+  ): Promise<string | null> => {
+    try {
+      // 确保跨域允许绘制
+      if (!video.getAttribute("crossorigin")) {
+        video.setAttribute("crossorigin", "anonymous");
+      }
+      
+      // 等待下一帧渲染，避免 seek/暂停导致闪烁
+      // 添加超时机制，避免无限等待
+      try {
+        if ("requestVideoFrameCallback" in video) {
+          await Promise.race([
+            new Promise<void>((resolve) =>
+              (video as any).requestVideoFrameCallback(() => resolve())
+            ),
+            sleep(500), // 500ms 超时
+          ]);
+        } else {
+          // 未支持 rVFC 时，短暂等待一帧
+          await sleep(30);
+        }
+      } catch (e) {
+        // 如果等待失败，继续执行（可能视频未播放或 API 不支持）
+        console.warn("视频帧等待失败，继续截图:", e);
+      }
+
+      const width = video.videoWidth || video.clientWidth || 0;
+      const height = video.videoHeight || video.clientHeight || 0;
+      if (!width || !height) {
+        console.warn("视频尺寸无效，跳过截图");
+        return null;
+      }
+
+      const tempCanvas = document.createElement("canvas");
+      tempCanvas.width = width;
+      tempCanvas.height = height;
+      const ctx = tempCanvas.getContext("2d");
+      if (!ctx) {
+        console.warn("无法创建画布上下文");
+        return null;
+      }
+      
+      try {
+        ctx.drawImage(video, 0, 0, width, height);
+        const dataUrl = tempCanvas.toDataURL("image/png");
+        video.setAttribute("data-video-snapshot-id", id);
+        return dataUrl;
+      } catch (e) {
+        // 绘制失败（可能是跨域问题），返回 null 但不阻塞整个流程
+        console.warn("视频绘制失败，可能是跨域问题:", e);
+        return null;
+      }
+    } catch (e) {
+      console.warn("捕获视频帧失败:", e);
+      return null;
+    }
+  };
+
+  /**
+   * 预处理文章内视频，获取首帧快照映射
+   */
+  const prepareVideoSnapshots = async (): Promise<Record<string, string>> => {
+    if (!articleRef.current) return {};
+    const videos = Array.from(
+      articleRef.current.querySelectorAll<HTMLVideoElement>("video")
+    );
+    const snapshotMap: Record<string, string> = {};
+
+    // 使用 Promise.allSettled 确保单个视频失败不会阻塞整个流程
+    const results = await Promise.allSettled(
+      videos.map(async (video, idx) => {
+        const id = String(idx);
+        const snapshot = await captureVideoFirstFrame(video, id);
+        if (snapshot) {
+          snapshotMap[id] = snapshot;
+        }
+        return { id, snapshot };
+      })
+    );
+
+    // 记录失败的视频（用于调试）
+    results.forEach((result, idx) => {
+      if (result.status === "rejected") {
+        console.warn(`视频 ${idx} 快照处理失败:`, result.reason);
+      }
+    });
+
+    return snapshotMap;
+  };
 
   /**
    * 将画布转换为图片（适配 DPR 和尺寸）
    */
   const canvasToImage = (
-    canvas: HTMLCanvasElement,
+    canvas: any, // 可以是Fabric.js Canvas实例或HTMLCanvasElement
     targetWidth?: number,
     targetHeight?: number
   ): Promise<string> => {
-    return new Promise((resolve) => {
-      // 如果 fabric canvas 可用，使用 fabric 的方法获取内容
-      if (fabricCanvasRef.current) {
-        const fabricCanvas = fabricCanvasRef.current;
-        
-        // 获取设备像素比
-        const dpr = window.devicePixelRatio || 1;
-        
-        // 获取目标尺寸
-        const displayWidth = targetWidth || fabricCanvas.getWidth();
-        const displayHeight = targetHeight || fabricCanvas.getHeight();
-        
-        // 使用 fabric canvas 的 toDataURL 方法，但需要调整尺寸
-        // 先创建一个临时画布
-        const tempCanvas = document.createElement("canvas");
-        const tempCtx = tempCanvas.getContext("2d");
-        
-        if (!tempCtx) {
-          resolve("");
-          return;
+    return new Promise((resolve, reject) => {
+      // 检查是否是Fabric.js Canvas实例
+      const isFabricCanvas = canvas && typeof canvas.getObjects === 'function' && typeof canvas.renderAll === 'function';
+
+      if (isFabricCanvas) {
+        const fabricCanvas = canvas;
+
+        // 检查是否有对象
+        const objects = fabricCanvas.getObjects();
+        if (objects.length === 0) {
+          console.warn("画布上没有批注对象");
+          // 即使没有对象，也返回一个透明图片，但先检查canvas状态
         }
-        
-        // 设置临时画布的实际分辨率（考虑 DPR，与 html2canvas 保持一致）
-        tempCanvas.width = displayWidth * dpr;
-        tempCanvas.height = displayHeight * dpr;
-        
-        // 缩放上下文以适配 DPR
-        tempCtx.scale(dpr, dpr);
-        
-        // 获取 fabric canvas 的底层 canvas
-        const fabricLowerCanvas = fabricCanvas.lowerCanvasEl || canvas;
-        const fabricWidth = fabricCanvas.getWidth();
-        const fabricHeight = fabricCanvas.getHeight();
-        
-        // 如果尺寸不一致，进行缩放
-        if (fabricWidth !== displayWidth || fabricHeight !== displayHeight) {
-          tempCtx.drawImage(fabricLowerCanvas, 0, 0, fabricWidth, fabricHeight, 0, 0, displayWidth, displayHeight);
-        } else {
-          tempCtx.drawImage(fabricLowerCanvas, 0, 0, displayWidth, displayHeight);
-        }
-        
-        // 生成截图
-        tempCanvas.toBlob(
-          (blob) => {
-            if (blob) {
-              const url = URL.createObjectURL(blob);
-              resolve(url);
+
+        // 确保画布已完全渲染（多次渲染确保所有对象都显示）
+        fabricCanvas.renderAll();
+
+        // 等待渲染完成
+        requestAnimationFrame(() => {
+          fabricCanvas.renderAll();
+
+          // 获取设备像素比
+          const dpr = window.devicePixelRatio || 1;
+
+          // 获取目标尺寸
+          const displayWidth = targetWidth || fabricCanvas.getWidth();
+          const displayHeight = targetHeight || fabricCanvas.getHeight();
+
+          // 使用 fabric.js 的 toCanvasElement 方法获取正确渲染的canvas
+          // 这比直接操作 lowerCanvasEl 更可靠
+          let canvasElement: HTMLCanvasElement;
+
+          try {
+            // 如果需要调整尺寸，使用 toCanvasElement
+            if (targetWidth && targetHeight) {
+              const scaleX = displayWidth / fabricCanvas.getWidth();
+              const scaleY = displayHeight / fabricCanvas.getHeight();
+              canvasElement = fabricCanvas.toCanvasElement(scaleX, scaleY);
             } else {
-              resolve("");
+              // 否则直接使用底层canvas
+              canvasElement = fabricCanvas.lowerCanvasEl;
             }
-          },
-          "image/png"
-        );
+
+            if (!canvasElement) {
+              reject(new Error("无法获取 fabric canvas 元素"));
+              return;
+            }
+
+            // 创建临时画布以应用 DPR 缩放
+            const tempCanvas = document.createElement("canvas");
+            const tempCtx = tempCanvas.getContext("2d");
+
+            if (!tempCtx) {
+              reject(new Error("无法创建画布上下文"));
+              return;
+            }
+
+            // 设置临时画布的实际分辨率（考虑 DPR）
+            tempCanvas.width = displayWidth * dpr;
+            tempCanvas.height = displayHeight * dpr;
+
+            // 缩放上下文以适配 DPR
+            tempCtx.scale(dpr, dpr);
+
+            // 绘制 fabric canvas 内容
+            tempCtx.drawImage(canvasElement, 0, 0, displayWidth, displayHeight);
+
+            // 生成截图
+            tempCanvas.toBlob(
+              (blob) => {
+                if (blob) {
+                  const url = URL.createObjectURL(blob);
+                  resolve(url);
+                } else {
+                  reject(new Error("画布转换为 Blob 失败"));
+                }
+              },
+              "image/png"
+            );
+          } catch (error) {
+            console.error("获取 fabric canvas 内容失败:", error);
+            reject(new Error("获取 fabric canvas 内容失败"));
+          }
+        });
         return;
       }
-      
-      // 如果没有 fabric canvas，使用普通方法
+
+      // 如果是普通HTML Canvas，使用普通方法
+      const htmlCanvas = canvas as HTMLCanvasElement;
       const dpr = window.devicePixelRatio || 1;
-      const rect = canvas.getBoundingClientRect();
+      const rect = htmlCanvas.getBoundingClientRect();
       const displayWidth = targetWidth || rect.width;
       const displayHeight = targetHeight || rect.height;
-      
+
       const tempCanvas = document.createElement("canvas");
       const tempCtx = tempCanvas.getContext("2d");
-      
+
       if (!tempCtx) {
-        resolve("");
+        reject(new Error("无法创建画布上下文"));
         return;
       }
-      
+
       tempCanvas.width = displayWidth * dpr;
       tempCanvas.height = displayHeight * dpr;
       tempCtx.scale(dpr, dpr);
-      tempCtx.drawImage(canvas, 0, 0, displayWidth, displayHeight);
-      
+      tempCtx.drawImage(htmlCanvas, 0, 0, displayWidth, displayHeight);
+
       tempCanvas.toBlob(
         (blob) => {
           if (blob) {
             const url = URL.createObjectURL(blob);
             resolve(url);
           } else {
-            resolve("");
+            reject(new Error("画布转换为 Blob 失败"));
           }
         },
         "image/png"
@@ -356,10 +507,15 @@ Hooks 让函数组件变得更加强大和灵活，是现代 React 开发的标�
       throw new Error("文章容器未找到");
     }
 
+    // 先确保视频停留在首帧，获取快照映射
+    const videoSnapshotMap = await prepareVideoSnapshots();
+
     let overlayElement: HTMLElement | null = null;
     let originalDisplay = "";
+    const videoReplacements: Array<{ video: HTMLVideoElement; img: HTMLImageElement }> = [];
 
     try {
+      // 1. 隐藏批注蒙层
       if (overlayRef.current) {
         overlayElement = overlayRef.current;
         originalDisplay = overlayElement.style.display;
@@ -367,6 +523,48 @@ Hooks 让函数组件变得更加强大和灵活，是现代 React 开发的标�
         await new Promise((resolve) => requestAnimationFrame(resolve));
       }
 
+      // 2. 将视频元素替换为快照图片（SnapDOM 无法处理视频）
+      const videos = Array.from(
+        articleRef.current.querySelectorAll<HTMLVideoElement>("video")
+      );
+      
+      videos.forEach((video) => {
+        const id = video.getAttribute("data-video-snapshot-id");
+        if (!id) return;
+        const snapshot = videoSnapshotMap[id];
+        if (!snapshot) return;
+
+        // 创建图片元素替换视频
+        const img = document.createElement("img");
+        img.src = snapshot;
+        
+        // 保持视频的样式和尺寸
+        const videoStyle = window.getComputedStyle(video);
+        img.style.width = videoStyle.width || "100%";
+        img.style.height = videoStyle.height || "auto";
+        img.style.display = "block";
+        img.style.objectFit = "cover";
+        img.style.borderRadius = videoStyle.borderRadius || "8px";
+        img.style.border = videoStyle.border || "1px solid #e5e7eb";
+        
+        // 复制类名
+        if (video.className) {
+          img.className = video.className;
+        }
+
+        // 替换视频为图片
+        if (video.parentNode) {
+          video.parentNode.insertBefore(img, video);
+          video.style.display = "none"; // 隐藏原视频，保留在DOM中以便恢复
+          videoReplacements.push({ video, img });
+        }
+      });
+
+      // 等待DOM更新
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // 3. 调用 SnapDOM 截图
       const snapdomModule = await import("@zumer/snapdom");
       const snapdom = snapdomModule?.snapdom;
       if (!snapdom) {
@@ -410,7 +608,16 @@ Hooks 让函数组件变得更加强大和灵活，是现代 React 开发的标�
 
       return dataUrl;
     } finally {
-      if (overlayElement) {
+      // 4. 恢复视频元素
+      videoReplacements.forEach(({ video, img }) => {
+        if (video.parentNode && img.parentNode) {
+          video.style.display = ""; // 恢复显示
+          img.parentNode.removeChild(img); // 移除临时图片
+        }
+      });
+
+      // 5. 恢复批注蒙层
+      if (overlayElement && originalDisplay !== undefined) {
         overlayElement.style.display = originalDisplay;
       }
     }
@@ -452,6 +659,15 @@ Hooks 让函数组件变得更加强大和灵活，是现代 React 开发的标�
   const captureArticleWithHtml2Canvas = async (): Promise<string> => {
     if (!articleRef.current) {
       throw new Error("文章容器未找到");
+    }
+
+    // 预处理视频首帧，供 html2canvas 使用
+    // 即使视频处理失败，也继续截图流程
+    let videoSnapshotMap: Record<string, string> = {};
+    try {
+      videoSnapshotMap = await prepareVideoSnapshots();
+    } catch (error) {
+      console.warn("视频快照预处理失败，继续截图（视频可能显示为空白）:", error);
     }
 
     // 获取容器的实际尺寸和位置
@@ -576,6 +792,30 @@ Hooks 让函数组件变得更加强大和灵活，是现代 React 开发的标�
             // 忽略元素处理错误
           }
         });
+
+        // 第三步：将视频替换为首帧图片，避免 html2canvas 捕获空白
+        const clonedVideos = clonedDoc.querySelectorAll("video[data-video-snapshot-id]");
+        clonedVideos.forEach((clonedVideo) => {
+          const id = clonedVideo.getAttribute("data-video-snapshot-id");
+          if (!id) return;
+          const snapshot = videoSnapshotMap[id];
+          if (!snapshot) return;
+
+          const img = clonedDoc.createElement("img");
+          img.src = snapshot;
+          img.style.width =
+            clonedVideo.getAttribute("width") !== null
+              ? `${clonedVideo.getAttribute("width")}px`
+              : "100%";
+          img.style.height =
+            clonedVideo.getAttribute("height") !== null
+              ? `${clonedVideo.getAttribute("height")}px`
+              : "auto";
+          img.style.display = "block";
+          img.className = clonedVideo.getAttribute("class") || "";
+
+          clonedVideo.replaceWith(img);
+        });
       },
       // 忽略某些可能导致问题的元素
       ignoreElements: (element) => {
@@ -588,56 +828,55 @@ Hooks 让函数组件变得更加强大和灵活，是现代 React 开发的标�
   };
 
   /**
+   * 安全加载图片，避免空 src 导致卡住
+   */
+  const loadImage = (src: string, timeoutMs = 8000): Promise<HTMLImageElement> =>
+    new Promise((resolve, reject) => {
+      if (!src) {
+        reject(new Error("图片地址为空"));
+        return;
+      }
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      const timer = setTimeout(() => {
+        reject(new Error("图片加载超时"));
+      }, timeoutMs);
+      img.onload = () => {
+        clearTimeout(timer);
+        resolve(img);
+      };
+      img.onerror = () => {
+        clearTimeout(timer);
+        reject(new Error("图片加载失败"));
+      };
+      img.src = src;
+    });
+
+  /**
    * 融合两张图片
    */
   const mergeImages = async (
     articleImage: string,
     canvasImage: string
   ): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const img1 = new Image();
-      const img2 = new Image();
+    const img1 = await loadImage(articleImage);
+    const img2 = await loadImage(canvasImage);
 
-      img1.crossOrigin = "anonymous";
-      img2.crossOrigin = "anonymous";
+    // 创建画布，使用文章截图的尺寸
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      throw new Error("无法创建画布上下文");
+    }
 
-      let loadedCount = 0;
-      const onLoad = () => {
-        loadedCount++;
-        if (loadedCount === 2) {
-          // 创建画布，使用文章截图的尺寸
-          const canvas = document.createElement("canvas");
-          const ctx = canvas.getContext("2d");
-          if (!ctx) {
-            reject(new Error("无法创建画布上下文"));
-            return;
-          }
+    canvas.width = img1.width;
+    canvas.height = img1.height;
 
-          // 使用文章截图的尺寸作为画布尺寸（确保对齐）
-          canvas.width = img1.width;
-          canvas.height = img1.height;
+    // 绘制背景与批注
+    ctx.drawImage(img1, 0, 0);
+    ctx.drawImage(img2, 0, 0, img1.width, img1.height);
 
-          // 先绘制文章截图（作为背景）
-          ctx.drawImage(img1, 0, 0);
-
-          // 再绘制画布批注（透明背景，叠加在上面）
-          // 确保画布批注的尺寸与文章截图完全一致
-          ctx.drawImage(img2, 0, 0, img1.width, img1.height);
-
-          // 转换为图片
-          const mergedImage = canvas.toDataURL("image/png");
-          resolve(mergedImage);
-        }
-      };
-
-      img1.onload = onLoad;
-      img2.onload = onLoad;
-      img1.onerror = () => reject(new Error("加载文章图片失败"));
-      img2.onerror = () => reject(new Error("加载画布图片失败"));
-
-      img1.src = articleImage;
-      img2.src = canvasImage;
-    });
+    return canvas.toDataURL("image/png");
   };
 
   /**
@@ -666,17 +905,13 @@ Hooks 让函数组件变得更加强大和灵活，是现代 React 开发的标�
    * 处理融合图片
    */
   const handleMerge = async (): Promise<void> => {
-    if (!canvasRef.current) {
-      alert("请先在画布上添加批注");
-      return;
-    }
-
     setIsMerging(true);
     try {
-      // 1. 先截图文章页面，获取实际尺寸
-      const articleImage = await captureArticle();
-      
-      // 2. 获取文章容器的实际尺寸（用于对齐画布）
+      if (!canvasRef.current || !fabricCanvasRef.current) {
+        throw new Error("请先在画布上添加批注");
+      }
+
+      // 1. 先获取文章容器的实际尺寸（用于对齐画布）
       // 必须使用与 html2canvas 相同的尺寸计算方式
       if (!articleRef.current) {
         throw new Error("文章容器未找到");
@@ -687,41 +922,57 @@ Hooks 让函数组件变得更加强大和灵活，是现代 React 开发的标�
       // 使用与 captureArticle 中相同的计算方式
       const articleWidth = articleScrollWidth || articleRect.width;
       const articleHeight = articleScrollHeight || articleRect.height;
-      
-      // 3. 确保画布尺寸与文章容器一致（在截图前同步）
-      if (fabricCanvasRef.current) {
-        const fabricCanvas = fabricCanvasRef.current;
-        const currentWidth = fabricCanvas.getWidth();
-        const currentHeight = fabricCanvas.getHeight();
-        
-        // 如果尺寸不一致，立即同步
-        if (Math.abs(currentWidth - articleWidth) > 1 || Math.abs(currentHeight - articleHeight) > 1) {
-          fabricCanvas.setDimensions({
-            width: articleWidth,
-            height: articleHeight,
-          });
-          fabricCanvas.renderAll();
-        }
-      }
-      
-      // 等待画布渲染完成
+
+      // 2. 先获取画布图片（此时overlay必须保持可见，确保fabric canvas完全渲染）
+      // 确保画布已完全渲染（不改变画布尺寸，避免对象丢失）
+      const fabricCanvas = fabricCanvasRef.current;
+
+      // 强制渲染多次，确保所有对象都显示
+      fabricCanvas.renderAll();
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      fabricCanvas.renderAll();
+      await new Promise((resolve) => requestAnimationFrame(resolve));
       await new Promise((resolve) => setTimeout(resolve, 100));
-      
-      // 4. 获取画布图片，确保尺寸与文章截图完全一致
+      fabricCanvas.renderAll();
+
+      // 获取画布图片，使用 canvasToImage 的缩放功能处理尺寸差异
+      // 不改变画布尺寸，避免批注对象丢失
       const canvasImage = await canvasToImage(
-        canvasRef.current,
+        fabricCanvas,
         articleWidth,
         articleHeight
       );
-
       if (!canvasImage) {
         throw new Error("无法获取画布图片");
+      }
+
+      // 3. 截图文章页面（使用不隐藏overlay的截图方法）
+      // 重要：确保overlay保持可见，避免影响fabric canvas的渲染状态
+      let articleImage: string;
+      switch (screenshotMethod) {
+        case "system":
+          // 系统截图时不隐藏overlay，避免影响fabric canvas
+          articleImage = await systemScreenshot(false); // false = 不隐藏overlay
+          break;
+        case "snapdom":
+          // SnapDOM截图时会临时处理overlay，但不影响已获取的canvas图片
+          articleImage = await captureArticleWithSnapdom();
+          break;
+        case "html2canvas":
+        default:
+          // html2canvas截图时不隐藏overlay
+          articleImage = await captureArticleWithHtml2Canvas();
+          break;
+      }
+
+      if (!articleImage) {
+        throw new Error("文章截图失败");
       }
 
       // 4. 融合两张图片
       const mergedImage = await mergeImages(articleImage, canvasImage);
 
-      // 4. 下载融合后的图片
+      // 5. 下载融合后的图片
       downloadImage(mergedImage, `merged-${Date.now()}.png`);
 
       alert("图片融合成功！已开始下载");
@@ -737,13 +988,14 @@ Hooks 让函数组件变得更加强大和灵活，是现代 React 开发的标�
    * 保存画布批注（单独保存）
    */
   const handleSaveCanvas = async (): Promise<void> => {
-    if (!canvasRef.current) {
+    if (!fabricCanvasRef.current) {
       alert("画布未初始化");
       return;
     }
 
     try {
-      const canvasImage = await canvasToImage(canvasRef.current);
+      // 传入fabric canvas实例，而不是HTML canvas元素
+      const canvasImage = await canvasToImage(fabricCanvasRef.current);
       if (canvasImage) {
         downloadImage(canvasImage, `annotation-${Date.now()}.png`);
         alert("画布批注已保存！");
@@ -759,7 +1011,30 @@ Hooks 让函数组件变得更加强大和灵活，是现代 React 开发的标�
    */
   const handleCaptureArticle = async (): Promise<void> => {
     try {
-      const articleImage = await captureArticle();
+      console.log("开始截图文章...");
+
+      // 根据选择的截图方式执行，但不隐藏overlay以避免影响fabric canvas
+      let articleImage: string;
+      switch (screenshotMethod) {
+        case "system":
+          // 系统截图时不隐藏overlay，避免影响fabric canvas
+          articleImage = await systemScreenshot(false); // false = 不隐藏overlay
+          break;
+        case "snapdom":
+          // SnapDOM截图时会临时处理overlay
+          articleImage = await captureArticleWithSnapdom();
+          break;
+        case "html2canvas":
+        default:
+          // html2canvas截图时不隐藏overlay
+          articleImage = await captureArticleWithHtml2Canvas();
+          break;
+      }
+
+      if (!articleImage) {
+        throw new Error("截图结果为空");
+      }
+      console.log("截图完成，开始下载...");
       downloadImage(articleImage, `article-${Date.now()}.png`);
       alert("文章截图已保存！");
     } catch (error) {
@@ -777,81 +1052,116 @@ Hooks 让函数组件变得更加强大和灵活，是现代 React 开发的标�
             Markdown 文章展示 + Fabric.js 画布批注 + 图片融合功能
           </p>
         </div>
-        <div className="flex flex-col gap-2">
-          <div className="flex gap-2">
-            <Button onClick={handleCaptureArticle} variant="outline">
-              截图文章
-            </Button>
-            <Button onClick={handleSaveCanvas} variant="outline">
-              保存批注
-            </Button>
-            <Button onClick={handleMerge} disabled={isMerging}>
-              {isMerging ? "融合中..." : "融合图片"}
-            </Button>
-          </div>
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-muted-foreground">截图方式：</span>
-            <Button
-              variant={screenshotMethod === "html2canvas" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setScreenshotMethod("html2canvas")}
-            >
-              html2canvas
-            </Button>
-            <Button
-              variant={screenshotMethod === "snapdom" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setScreenshotMethod("snapdom")}
-              disabled={!snapdomSupported}
-              title={
-                snapdomSupported
-                  ? "使用 SnapDOM 截图（实验）"
-                  : "SnapDOM 未加载或浏览器不支持"
-              }
-            >
-              SnapDOM
-            </Button>
-            <Button
-              variant={screenshotMethod === "system" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setScreenshotMethod("system")}
-              disabled={!systemScreenshotSupported}
-              title={
-                !systemScreenshotSupported
-                  ? "浏览器不支持系统截图（仅 Chrome/Edge 支持）"
-                  : "需要授权屏幕共享权限"
-              }
-            >
-              系统截图
-            </Button>
-          </div>
+      </div>
+
+      {/* 悬浮操作面板：桌面端固定，移动端依旧随文档流排布 */}
+      <div
+        className="z-30 sticky top-4 lg:top-24 self-end flex flex-col gap-2 p-3 bg-white/90 dark:bg-slate-900/90 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg w-full max-w-xl"
+      >
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={handleCaptureArticle} variant="outline" title="截图文章">
+            截图文章
+          </Button>
+          <Button onClick={handleSaveCanvas} variant="outline" title="保存批注">
+            保存批注
+          </Button>
+          <Button onClick={handleMerge} disabled={isMerging} title="融合图片">
+            {isMerging ? "融合中..." : "融合图片"}
+          </Button>
+          <Button
+            variant={isAnnotating ? "default" : "outline"}
+            onClick={() => setIsAnnotating((v) => !v)}
+            title={isAnnotating ? "退出批注以操作视频控件" : "进入批注模式"}
+          >
+            <span aria-hidden>{isAnnotating ? "✋" : "✏️"}</span>
+            <span className="sr-only">{isAnnotating ? "退出批注" : "进入批注"}</span>
+          </Button>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="text-muted-foreground">截图方式：</span>
+          <Button
+            variant={screenshotMethod === "html2canvas" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setScreenshotMethod("html2canvas")}
+            title="使用 html2canvas 截图"
+          >
+            html2canvas
+          </Button>
+          <Button
+            variant={screenshotMethod === "snapdom" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setScreenshotMethod("snapdom")}
+            disabled={!snapdomSupported}
+            title={
+              snapdomSupported
+                ? "使用 SnapDOM 截图（实验）"
+                : "SnapDOM 未加载或浏览器不支持"
+            }
+          >
+            SnapDOM
+          </Button>
+          <Button
+            variant={screenshotMethod === "system" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setScreenshotMethod("system")}
+            disabled={!systemScreenshotSupported}
+            title={
+              !systemScreenshotSupported
+                ? "浏览器不支持系统截图（仅 Chrome/Edge 支持）"
+                : "需要授权屏幕共享权限"
+            }
+          >
+            系统截图
+          </Button>
         </div>
       </div>
 
       {/* 文章容器 + 画布蒙层 */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          {/* 工具栏 - 放在标题旁边 */}
-          <div className="flex flex-wrap items-center gap-2">
-            <CanvasAnnotation
-              canvasRef={canvasRef}
-              articleRef={articleRef}
-              showToolbarOnly={true}
-              fabricCanvasRef={fabricCanvasRef}
-            />
+        {isAnnotating ? (
+          <div className="fixed inset-x-0 bottom-4 z-40 flex justify-center pointer-events-none">
+            <div className="pointer-events-auto bg-white/90 dark:bg-slate-900/90 border border-gray-200 dark:border-gray-700 shadow-lg rounded-lg px-3 py-2 flex flex-wrap items-center gap-2">
+              <CanvasAnnotation
+                canvasRef={canvasRef}
+                articleRef={articleRef}
+                showToolbarOnly={true}
+                fabricCanvasRef={fabricCanvasRef}
+              />
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="flex items-center justify-between">
+            {/* 工具栏 - 放在标题旁边 */}
+            <div className="flex flex-wrap items-center gap-2">
+              <CanvasAnnotation
+                canvasRef={canvasRef}
+                articleRef={articleRef}
+                showToolbarOnly={true}
+                fabricCanvasRef={fabricCanvasRef}
+              />
+            </div>
+          </div>
+        )}
         <div className="relative">
           {/* 文章内容 */}
           <div
             ref={articleRef}
             className="bg-white p-6 rounded-lg shadow-md border relative"
           >
-            <MarkdownArticle content={sampleMarkdown} />
+            {memoizedArticle}
           </div>
 
           {/* 画布蒙层 - 覆盖在文章上方，完全匹配文章容器尺寸 */}
-          <div ref={overlayRef} className="absolute inset-0 pointer-events-none">
+          <div
+            ref={overlayRef}
+            className={`absolute inset-0 transition-opacity duration-150 ${
+              isAnnotating ? "opacity-100" : "opacity-0"
+            }`}
+            style={{
+              pointerEvents: isAnnotating ? "auto" : "none",
+              visibility: isAnnotating ? "visible" : "hidden",
+            }}
+          >
             <CanvasAnnotation
               canvasRef={canvasRef}
               articleRef={articleRef}
