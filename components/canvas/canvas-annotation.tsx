@@ -75,22 +75,62 @@ export function CanvasAnnotation({
     return `url("data:image/svg+xml,${encoded}") ${cx} ${cy}, auto`;
   };
 
+  /**
+   * PS 风格橡皮擦光标：双环（外圈浅黑 + 内圈偏白）+ 中心点
+   * 让用户直观看到擦除半径，但不会有“黑色橡皮擦”的心理暗示。
+   */
+  const createPsEraserCursor = (diameterPx: number): string => {
+    // 橡皮擦允许更大尺寸；同时 clamp 防止 data-uri 过大导致浏览器 cursor 不稳定
+    const size = Math.max(20, Math.min(120, Math.round(diameterPx)));
+    const r = Math.max(5, Math.floor(size / 2) - 1);
+    const cx = Math.floor(size / 2);
+    const cy = Math.floor(size / 2);
+
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="rgba(0,0,0,0.35)" stroke-width="3"/>
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="rgba(255,255,255,0.92)" stroke-width="1.5"/>
+      <circle cx="${cx}" cy="${cy}" r="1" fill="rgba(255,255,255,0.92)"/>
+    </svg>`;
+
+    const encoded = encodeURIComponent(svg)
+      .replace(/'/g, "%27")
+      .replace(/"/g, "%22");
+    return `url("data:image/svg+xml,${encoded}") ${cx} ${cy}, auto`;
+  };
+
   const applyCursorForTool = (canvas: any, currentTool: ToolType, currentWidth: number): void => {
     try {
+      const applyDomCursor = (cursorValue: string): void => {
+        // Fabric 在交互时最终取的通常是 upperCanvasEl 的 DOM cursor
+        if (canvas?.upperCanvasEl) {
+          canvas.upperCanvasEl.style.cursor = cursorValue;
+        }
+        if (canvas?.lowerCanvasEl) {
+          canvas.lowerCanvasEl.style.cursor = cursorValue;
+        }
+        // 兼容：某些情况下需要显式 setCursor 才会生效
+        if (typeof canvas?.setCursor === "function") {
+          canvas.setCursor(cursorValue);
+        }
+      };
+
       if (currentTool === "eraser") {
-        const cursor = createCircleCursor(currentWidth);
+        const cursor = createPsEraserCursor(currentWidth);
         canvas.defaultCursor = cursor;
         canvas.hoverCursor = cursor;
         canvas.freeDrawingCursor = cursor;
+        applyDomCursor(cursor);
       } else if (currentTool === "pen" || currentTool === "brush") {
         canvas.defaultCursor = "crosshair";
         canvas.hoverCursor = "crosshair";
         canvas.freeDrawingCursor = "crosshair";
+        applyDomCursor("crosshair");
       } else {
         // 非绘制类工具使用默认指针
         canvas.defaultCursor = "default";
         canvas.hoverCursor = "move";
         canvas.freeDrawingCursor = "default";
+        applyDomCursor("default");
       }
     } catch {
       // 忽略：不同 fabric 版本字段可能不一致
@@ -316,10 +356,17 @@ export function CanvasAnnotation({
       return;
     }
 
+    // 需求：切换到橡皮擦时，自动将线宽调到 20
+    // 注意：setState 是异步的，所以下面所有依赖线宽的逻辑都用 nextBrushWidth
+    const nextBrushWidth = newTool === "eraser" ? 20 : brushWidth;
+    if (newTool === "eraser" && brushWidth !== 20) {
+      setBrushWidth(20);
+    }
+
     setTool(newTool);
     const canvas = fabricCanvasRef.current;
     setCanvasToolFlag(canvas, newTool);
-    applyCursorForTool(canvas, newTool, brushWidth);
+    applyCursorForTool(canvas, newTool, nextBrushWidth);
 
     // 完全禁用绘制模式，确保可以正常选择和操作对象
     canvas.isDrawingMode = false;
@@ -337,7 +384,7 @@ export function CanvasAnnotation({
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           canvas.freeDrawingBrush = new (fabric as any).PencilBrush(canvas);
         }
-        canvas.freeDrawingBrush.width = brushWidth;
+        canvas.freeDrawingBrush.width = nextBrushWidth;
         canvas.freeDrawingBrush.color = brushColor;
         break;
       case "eraser":
@@ -346,27 +393,50 @@ export function CanvasAnnotation({
         if (fabric && (fabric as any).EraserBrush) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const eraserBrush = new (fabric as any).EraserBrush(canvas);
-          eraserBrush.width = brushWidth;
+          eraserBrush.width = nextBrushWidth;
 
-          // 体验优化（参考 PS）：不显示“橡皮擦轨迹线”，只显示擦除效果 + 光标圆圈
-          // Fabric 默认会在 contextTop 上渲染一个黑色轨迹（用于复杂 erasable 场景的视觉遮罩），
-          // 我们的场景是“仅在批注层擦除”，不需要这层轨迹。
+          // 体验优化（参考 PS）：橡皮擦拖动轨迹不使用黑色，改为“白色 + 半透明 + 柔和边缘”
+          // Fabric 原生 EraserBrush 默认在 contextTop 画黑色轨迹并叠加 pattern；
+          // 我们改为：
+          // - 主画布继续执行真实擦除（destination-out）
+          // - 顶层 contextTop 只画一条白色半透明的“轨迹预览”（不做 pattern 遮罩）
           try {
             const pencilRender = (fabric as any).PencilBrush?.prototype?._render;
             if (typeof pencilRender === "function") {
+              const originalSetBrushStyles = (eraserBrush as any)._setBrushStyles;
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (eraserBrush as any)._setBrushStyles = function (ctx: any) {
+                if (typeof originalSetBrushStyles === "function") {
+                  originalSetBrushStyles.call(this, ctx);
+                }
+                // 仅影响顶层预览轨迹：白色半透明 + 轻微阴影，类似 PS
+                if (ctx === (this as any).canvas.contextTop) {
+                  ctx.strokeStyle = "rgba(255,255,255,0.66)";
+                  ctx.lineCap = "round";
+                  ctx.lineJoin = "round";
+                  ctx.shadowColor = "rgba(0,0,0,0.33)";
+                  ctx.shadowBlur = 2;
+                  ctx.shadowOffsetX = 0;
+                  ctx.shadowOffsetY = 0;
+                }
+              };
+
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               (eraserBrush as any)._render = function () {
-                // 只在主画布上执行 destination-out 擦除
+                // 1) 主画布：真实擦除
                 if (!(this as any).inverted) {
-                  const ctx = (this as any).canvas.getContext();
-                  pencilRender.call(this, ctx);
+                  const ctxMain = (this as any).canvas.getContext();
+                  pencilRender.call(this, ctxMain);
                 }
-                // 清空顶层轨迹，避免“画线”的视觉干扰
-                (this as any).canvas.clearContext((this as any).canvas.contextTop);
+
+                // 2) 顶层：白色半透明轨迹预览（不走原生 pattern 逻辑，避免黑色遮罩）
+                const ctxTop = (this as any).canvas.contextTop;
+                (this as any).canvas.clearContext(ctxTop);
+                pencilRender.call(this, ctxTop);
               };
             }
           } catch {
-            // 忽略：仅影响预览轨迹，不影响擦除功能
+            // 忽略：仅影响预览轨迹样式，不影响擦除功能
           }
 
           // 轨迹边缘更圆润（更接近 PS）
@@ -384,9 +454,9 @@ export function CanvasAnnotation({
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             canvas.freeDrawingBrush = new (fabric as any).PencilBrush(canvas);
           }
-          canvas.freeDrawingBrush.width = brushWidth;
-          // 这里设置为不透明，避免 destination-out 擦除力度不足
-          canvas.freeDrawingBrush.color = "rgba(0,0,0,1)";
+          canvas.freeDrawingBrush.width = nextBrushWidth;
+          // 预览轨迹：白色半透明（类似 PS）。最终擦除强度会在 path:created 时强制为不透明 destination-out
+          canvas.freeDrawingBrush.color = "rgba(255,255,255,0.55)";
         }
         break;
       case "text":
@@ -520,7 +590,7 @@ export function CanvasAnnotation({
 
   // 如果只显示工具栏，返回工具栏组件
   if (showToolbarOnly) {
-    const brushWidthMax = tool === "eraser" ? 60 : 20;
+    const brushWidthMax = tool === "eraser" ? 120 : 20;
     return (
       <div className="flex flex-wrap items-center gap-2 p-2 bg-gray-50 rounded-lg border border-gray-200">
         <div className="flex gap-1">
@@ -581,9 +651,7 @@ export function CanvasAnnotation({
         </div>
 
         <div className="flex items-center gap-2">
-          <label className="text-sm font-medium">
-            {tool === "eraser" ? "颜色(橡皮擦无效):" : "颜色:"}
-          </label>
+          <label className="text-sm font-medium">颜色:</label>
           <input
             type="color"
             value={brushColor}
