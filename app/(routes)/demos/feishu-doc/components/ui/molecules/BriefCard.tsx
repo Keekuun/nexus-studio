@@ -1,5 +1,10 @@
 import { NodeViewWrapper } from '@tiptap/react'
-import React from 'react'
+import React, { useState } from 'react'
+import { HeadingPrimitive } from '../primitives/HeadingPrimitive'
+import { ImagePrimitive } from '../primitives/ImagePrimitive'
+import { IconPrimitive } from '../primitives/IconPrimitive'
+import { ButtonPrimitive } from '../primitives/ButtonPrimitive'
+import { ImageViewerPrimitive } from '../primitives/ImageViewerPrimitive'
 
 interface ReferenceItem {
     type: 'image' | 'video';
@@ -17,6 +22,33 @@ export const BriefCard = ({ node }: any) => {
   
   const baseBlockId = node.attrs.blockId || 'brief-card';
 
+  // State for image viewer
+  const [isOpen, setIsOpen] = useState(false)
+  const [currentIndex, setCurrentIndex] = useState(0)
+
+  // Filter only images for the viewer, but we need to map the original index to the filtered index
+  // Or simpler: just pass all items to ImageViewer and let it handle or skip non-images?
+  // Current ImageViewerPrimitive assumes everything is an image. 
+  // Let's create a list of just images for the viewer, and find the correct index when clicking.
+  const imageReferences = references.filter((r: ReferenceItem) => r.type === 'image');
+  
+  const openGallery = (originalIndex: number) => {
+    const item = references[originalIndex];
+    if (item.type !== 'image') return; // Don't open gallery for video
+
+    // Find the index of this image in the filtered imageReferences array
+    // We need to match by reference equality or some ID. Since we don't have IDs, 
+    // we can assume order is preserved.
+    // Let's iterate and count images until we hit this one.
+    let imgIndex = 0;
+    for (let i = 0; i < originalIndex; i++) {
+        if (references[i].type === 'image') imgIndex++;
+    }
+    
+    setCurrentIndex(imgIndex)
+    setIsOpen(true)
+  }
+
   return (
     <NodeViewWrapper 
         className="brief-card-block bg-white rounded-xl border border-gray-200 my-8 shadow-sm overflow-hidden" 
@@ -25,30 +57,24 @@ export const BriefCard = ({ node }: any) => {
       {/* Header */}
       <div className="border-b border-gray-100 p-4 flex items-center justify-between">
           <div className="flex items-center gap-2 text-gray-600">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
+              <IconPrimitive name="brief" className="w-4 h-4" />
               <span className="font-medium text-sm">Brief</span>
           </div>
           <div className="flex items-center gap-3">
-              <button className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors">
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                  </svg>
+              <ButtonPrimitive variant="outline" size="sm" className="gap-1.5">
+                  <IconPrimitive name="batch-feedback" className="w-3.5 h-3.5" />
                   Batch Feedback
-              </button>
-              <button className="text-gray-400 hover:text-gray-600">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-              </button>
+              </ButtonPrimitive>
+              <ButtonPrimitive variant="ghost" size="icon" className="text-gray-400 hover:text-gray-600">
+                  <IconPrimitive name="close" className="w-4 h-4" />
+              </ButtonPrimitive>
           </div>
       </div>
 
       <div className="p-6">
           {/* Title & Info */}
           <div className="mb-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-1">{title}</h2>
+              <HeadingPrimitive level={2} className="mb-1">{title}</HeadingPrimitive>
               <p className="text-xs text-gray-500">{date}</p>
           </div>
 
@@ -91,70 +117,95 @@ export const BriefCard = ({ node }: any) => {
               <div className="flex flex-col md:flex-row gap-4">
                   {/* Column 1 */}
                   <div className="flex flex-col gap-4 flex-1">
-                      {references.filter((_: ReferenceItem, i: number) => i % 3 === 0).map((item: ReferenceItem, index: number) => (
+                      {references.filter((_: ReferenceItem, i: number) => i % 3 === 0).map((item: ReferenceItem, index: number) => {
+                          const realIndex = index * 3;
+                          return (
                           <div 
                             key={`col1-${index}`} 
                             className="relative bg-gray-100 rounded-lg overflow-hidden border border-gray-200 cursor-pointer group"
-                            data-block-id={`${baseBlockId}-ref-${index * 3}`}
+                            data-block-id={`${baseBlockId}-ref-${realIndex}`}
+                            onClick={() => openGallery(realIndex)}
                           >
-                              <img src={item.src} alt="Reference" className="w-full h-auto block" />
+                              <ImagePrimitive 
+                                src={item.src} 
+                                alt="Reference" 
+                                className="w-full h-auto block" 
+                                preview={false}
+                              />
                               {item.type === 'video' && (
                                   <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-colors">
                                       <div className="w-10 h-10 rounded-full bg-white/30 backdrop-blur-sm flex items-center justify-center text-white">
-                                          <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
-                                              <path d="M8 5v14l11-7z" />
-                                          </svg>
+                                          <IconPrimitive name="play" className="w-5 h-5" />
                                       </div>
                                   </div>
                               )}
                           </div>
-                      ))}
+                      )})}
                   </div>
                   {/* Column 2 */}
                   <div className="flex flex-col gap-4 flex-1">
-                      {references.filter((_: ReferenceItem, i: number) => i % 3 === 1).map((item: ReferenceItem, index: number) => (
+                      {references.filter((_: ReferenceItem, i: number) => i % 3 === 1).map((item: ReferenceItem, index: number) => {
+                          const realIndex = index * 3 + 1;
+                          return (
                           <div 
                             key={`col2-${index}`} 
                             className="relative bg-gray-100 rounded-lg overflow-hidden border border-gray-200 cursor-pointer group"
-                            data-block-id={`${baseBlockId}-ref-${index * 3 + 1}`}
+                            data-block-id={`${baseBlockId}-ref-${realIndex}`}
+                            onClick={() => openGallery(realIndex)}
                           >
-                              <img src={item.src} alt="Reference" className="w-full h-auto block" />
+                              <ImagePrimitive 
+                                src={item.src} 
+                                alt="Reference" 
+                                className="w-full h-auto block" 
+                                preview={false}
+                              />
                               {item.type === 'video' && (
                                   <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-colors">
                                       <div className="w-10 h-10 rounded-full bg-white/30 backdrop-blur-sm flex items-center justify-center text-white">
-                                          <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
-                                              <path d="M8 5v14l11-7z" />
-                                          </svg>
+                                          <IconPrimitive name="play" className="w-5 h-5" />
                                       </div>
                                   </div>
                               )}
                           </div>
-                      ))}
+                      )})}
                   </div>
                   {/* Column 3 */}
                   <div className="flex flex-col gap-4 flex-1">
-                      {references.filter((_: ReferenceItem, i: number) => i % 3 === 2).map((item: ReferenceItem, index: number) => (
+                      {references.filter((_: ReferenceItem, i: number) => i % 3 === 2).map((item: ReferenceItem, index: number) => {
+                          const realIndex = index * 3 + 2;
+                          return (
                           <div 
                             key={`col3-${index}`} 
                             className="relative bg-gray-100 rounded-lg overflow-hidden border border-gray-200 cursor-pointer group"
-                            data-block-id={`${baseBlockId}-ref-${index * 3 + 2}`}
+                            data-block-id={`${baseBlockId}-ref-${realIndex}`}
+                            onClick={() => openGallery(realIndex)}
                           >
-                              <img src={item.src} alt="Reference" className="w-full h-auto block" />
+                              <ImagePrimitive 
+                                src={item.src} 
+                                alt="Reference" 
+                                className="w-full h-auto block" 
+                                preview={false}
+                              />
                               {item.type === 'video' && (
                                   <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-colors">
                                       <div className="w-10 h-10 rounded-full bg-white/30 backdrop-blur-sm flex items-center justify-center text-white">
-                                          <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
-                                              <path d="M8 5v14l11-7z" />
-                                          </svg>
+                                          <IconPrimitive name="play" className="w-5 h-5" />
                                       </div>
                                   </div>
                               )}
                           </div>
-                      ))}
+                      )})}
                   </div>
               </div>
           </div>
       </div>
+
+      <ImageViewerPrimitive 
+        images={imageReferences} 
+        initialIndex={currentIndex} 
+        isOpen={isOpen} 
+        onClose={() => setIsOpen(false)} 
+      />
     </NodeViewWrapper>
   )
 }

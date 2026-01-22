@@ -1,5 +1,9 @@
 import { NodeViewWrapper, NodeViewContent } from '@tiptap/react'
 import React from 'react'
+import { HeadingPrimitive } from '../primitives/HeadingPrimitive'
+import { IconPrimitive } from '../primitives/IconPrimitive'
+import { ButtonPrimitive } from '../primitives/ButtonPrimitive'
+import { TagPrimitive } from '../primitives/TagPrimitive'
 
 export const CreativePlanning = ({ node }: any) => {
   const { 
@@ -20,32 +24,26 @@ export const CreativePlanning = ({ node }: any) => {
         data-block-id={baseBlockId}
     >
       {/* Header */}
-      <div className="border-b border-gray-100 p-4 flex items-center justify-between">
+      <div className="border-b border-gray-100 p-4 flex items-center justify-between" data-block-id={`${baseBlockId}-header`}>
           <div className="flex items-center gap-2 text-gray-600">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-              </svg>
+              <IconPrimitive name="creative" className="w-4 h-4" />
               <span className="font-medium text-sm">Creative Planning</span>
           </div>
           <div className="flex items-center gap-3">
-              <button className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors">
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                  </svg>
+              <ButtonPrimitive variant="outline" size="sm" className="gap-1.5">
+                  <IconPrimitive name="batch-feedback" className="w-3.5 h-3.5" />
                   Batch Feedback
-              </button>
-              <button className="text-gray-400 hover:text-gray-600">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-              </button>
+              </ButtonPrimitive>
+              <ButtonPrimitive variant="ghost" size="icon" className="text-gray-400 hover:text-gray-600">
+                  <IconPrimitive name="close" className="w-4 h-4" />
+              </ButtonPrimitive>
           </div>
       </div>
 
       <div className="p-6">
           {/* Title & Info */}
-          <div className="mb-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-1">{title}</h2>
+          <div className="mb-6" data-block-id={`${baseBlockId}-title`}>
+              <HeadingPrimitive level={2} className="mb-1">{title}</HeadingPrimitive>
               <p className="text-xs text-gray-500">{date}</p>
           </div>
 
@@ -55,14 +53,10 @@ export const CreativePlanning = ({ node }: any) => {
                   <div 
                     key={index} 
                     className={`flex-1 p-3 rounded-lg border cursor-pointer transition-all ${tab.active ? 'bg-gray-50 border-gray-200 ring-1 ring-gray-200' : 'bg-white border-gray-100 hover:border-gray-200'}`}
+                    data-block-id={`${baseBlockId}-tab-${index}`}
                   >
                       <div className="font-semibold text-sm text-gray-900 mb-1">{tab.label}</div>
-                      <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-medium 
-                        ${tab.color === 'blue' ? 'bg-blue-100 text-blue-700' : 
-                          tab.color === 'orange' ? 'bg-orange-100 text-orange-700' : 
-                          'bg-yellow-100 text-yellow-700'}`}>
-                          {tab.tag}
-                      </span>
+                      <TagPrimitive label={tab.tag} color={tab.color} />
                   </div>
               ))}
           </div>

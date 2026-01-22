@@ -262,6 +262,23 @@ const initialContent = {
         }
     },
     {
+        type: 'videoBlock',
+        attrs: {
+            blockId: 'video-1',
+            src: 'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/720/Big_Buck_Bunny_720_10s_1MB.mp4',
+            poster: 'https://images.unsplash.com/photo-1492633423870-43d1cd2775eb',
+            caption: 'Video Demo: Big Buck Bunny'
+        }
+    },
+    {
+        type: 'audioBlock',
+        attrs: {
+            blockId: 'audio-1',
+            src: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+            caption: 'Audio Demo: SoundHelix Song 1'
+        }
+    },
+    {
         type: 'cardBlock',
         attrs: { blockId: 'card-1', title: 'Action Items' },
         content: [

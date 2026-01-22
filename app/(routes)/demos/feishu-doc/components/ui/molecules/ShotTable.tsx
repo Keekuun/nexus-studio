@@ -1,5 +1,7 @@
 import { NodeViewWrapper } from '@tiptap/react'
-import React from 'react'
+import React, { useState } from 'react'
+import { ImagePrimitive } from '../primitives/ImagePrimitive'
+import { ImageViewerPrimitive } from '../primitives/ImageViewerPrimitive'
 
 interface ShotData {
     id: number;
@@ -11,6 +13,30 @@ interface ShotData {
 export const ShotTable = ({ node }: any) => {
   const { data = [] } = node.attrs
   const baseBlockId = node.attrs.blockId || 'shot-table';
+
+  const [isOpen, setIsOpen] = useState(false)
+  const [currentIndex, setCurrentIndex] = useState(0)
+
+  // Flatten all images into a single array for the viewer
+  // We need to store them as { src: string } objects to match ImageViewer interface
+  // Also need a way to map from (rowIndex, imgIndex) to flattenedIndex
+  
+  const allImages: { src: string }[] = [];
+  // Map to store starting index for each row to easily calculate global index
+  const rowStartIndices: number[] = [];
+
+  data.forEach((row: ShotData) => {
+      rowStartIndices.push(allImages.length);
+      row.images.forEach(img => {
+          allImages.push({ src: img });
+      });
+  });
+
+  const openGallery = (rowIndex: number, imgIndex: number) => {
+      const globalIndex = rowStartIndices[rowIndex] + imgIndex;
+      setCurrentIndex(globalIndex);
+      setIsOpen(true);
+  }
 
   return (
     <NodeViewWrapper 
@@ -47,8 +73,14 @@ export const ShotTable = ({ node }: any) => {
                                     key={imgIndex} 
                                     className="relative w-24 h-32 flex-shrink-0 rounded-md overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer group"
                                     data-block-id={`${baseBlockId}-row-${rowIndex}-img-${imgIndex}`}
+                                    onClick={() => openGallery(rowIndex, imgIndex)}
                                   >
-                                      <img src={img} alt={`Shot ${row.id}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                      <ImagePrimitive 
+                                        src={img} 
+                                        alt={`Shot ${row.id}`} 
+                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                                        preview={false}
+                                      />
                                   </div>
                               ))}
                           </div>
@@ -63,6 +95,13 @@ export const ShotTable = ({ node }: any) => {
               ))}
           </tbody>
       </table>
+
+      <ImageViewerPrimitive 
+        images={allImages} 
+        initialIndex={currentIndex} 
+        isOpen={isOpen} 
+        onClose={() => setIsOpen(false)} 
+      />
     </NodeViewWrapper>
   )
 }

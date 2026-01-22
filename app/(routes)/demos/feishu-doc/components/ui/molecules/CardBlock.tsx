@@ -1,5 +1,6 @@
 import { NodeViewContent, NodeViewWrapper } from '@tiptap/react'
 import React from 'react'
+import { HeadingPrimitive } from '../primitives/HeadingPrimitive'
 
 export const CardBlock = ({ node }: any) => {
   const { title } = node.attrs
@@ -10,7 +11,7 @@ export const CardBlock = ({ node }: any) => {
         data-block-id={node.attrs.blockId}
     >
       <div className="bg-gray-50 border-b border-gray-100 px-4 py-3 flex items-center justify-between">
-          <span className="font-semibold text-gray-700 text-sm">{title || 'Card Title'}</span>
+          <HeadingPrimitive level={4} className="text-sm m-0 mb-0 font-semibold text-gray-700">{title || 'Card Title'}</HeadingPrimitive>
           <div className="flex gap-1">
               <div className="w-2 h-2 rounded-full bg-red-400"></div>
               <div className="w-2 h-2 rounded-full bg-yellow-400"></div>

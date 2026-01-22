@@ -9,6 +9,8 @@ import { Heading } from './ui/atoms/Heading'
 import { Paragraph } from './ui/atoms/Paragraph'
 import { Tag } from './ui/atoms/Tag'
 import { ImageBlock } from './ui/atoms/ImageBlock'
+import { VideoBlock } from './ui/atoms/VideoBlock'
+import { AudioBlock } from './ui/atoms/AudioBlock'
 import { Section as SectionComponent } from './ui/molecules/Section'
 import { ImageGallery } from './ui/molecules/ImageGallery'
 import { TableBlock } from './ui/molecules/TableBlock'
@@ -26,7 +28,7 @@ export const BlockId = Extension.create({
   addGlobalAttributes() {
     return [
       {
-        types: ['paragraph', 'heading', 'image', 'blockquote', 'section', 'bulletList', 'orderedList', 'imageBlock', 'imageGallery', 'tableBlock', 'cardBlock', 'tag', 'storyCard', 'shotTable', 'briefCard', 'creativePlanning'],
+        types: ['paragraph', 'heading', 'image', 'blockquote', 'section', 'bulletList', 'orderedList', 'imageBlock', 'videoBlock', 'audioBlock', 'imageGallery', 'tableBlock', 'cardBlock', 'tag', 'storyCard', 'shotTable', 'briefCard', 'creativePlanning'],
         attributes: {
           blockId: {
             default: null,
@@ -179,6 +181,51 @@ const CustomImageBlock = Node.create({
     },
     addNodeView() {
         return ReactNodeViewRenderer(ImageBlock)
+    }
+})
+
+const CustomVideoBlock = Node.create({
+    name: 'videoBlock',
+    group: 'block',
+    draggable: true,
+    addAttributes() {
+        return {
+            src: { default: null },
+            poster: { default: null },
+            caption: { default: null },
+            blockId: { default: null },
+        }
+    },
+    parseHTML() {
+        return [{ tag: 'div[data-type="video-block"]' }]
+    },
+    renderHTML({ HTMLAttributes }) {
+        return ['div', mergeAttributes(HTMLAttributes, { 'data-type': 'video-block' })]
+    },
+    addNodeView() {
+        return ReactNodeViewRenderer(VideoBlock)
+    }
+})
+
+const CustomAudioBlock = Node.create({
+    name: 'audioBlock',
+    group: 'block',
+    draggable: true,
+    addAttributes() {
+        return {
+            src: { default: null },
+            caption: { default: null },
+            blockId: { default: null },
+        }
+    },
+    parseHTML() {
+        return [{ tag: 'div[data-type="audio-block"]' }]
+    },
+    renderHTML({ HTMLAttributes }) {
+        return ['div', mergeAttributes(HTMLAttributes, { 'data-type': 'audio-block' })]
+    },
+    addNodeView() {
+        return ReactNodeViewRenderer(AudioBlock)
     }
 })
 
@@ -364,6 +411,8 @@ export const getExtensions = () => [
   CustomTag,
   Section,
   CustomImageBlock,
+  CustomVideoBlock,
+  CustomAudioBlock,
   CustomImageGallery,
   CustomTableBlock,
   CustomCardBlock,

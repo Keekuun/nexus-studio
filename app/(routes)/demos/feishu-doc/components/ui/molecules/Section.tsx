@@ -1,5 +1,6 @@
 import { NodeViewContent, NodeViewWrapper } from '@tiptap/react'
 import React from 'react'
+import { TagPrimitive } from '../primitives/TagPrimitive'
 
 export const Section = ({ node }: any) => {
   return (
@@ -9,7 +10,7 @@ export const Section = ({ node }: any) => {
         data-block-id={node.attrs.blockId}
     >
       <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <span className="text-[10px] text-gray-400 bg-white px-1 py-0.5 rounded border shadow-sm">Container</span>
+          <TagPrimitive label="Container" color="gray" className="bg-white shadow-sm" />
       </div>
       <NodeViewContent />
     </NodeViewWrapper>
