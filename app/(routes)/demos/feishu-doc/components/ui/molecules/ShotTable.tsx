@@ -2,6 +2,7 @@ import { NodeViewWrapper } from '@tiptap/react'
 import React, { useState } from 'react'
 import { ImagePrimitive } from '../primitives/ImagePrimitive'
 import { ImageViewerPrimitive } from '../primitives/ImageViewerPrimitive'
+import { MarkdownPrimitive } from '../primitives/MarkdownPrimitive'
 
 interface ShotData {
     id: number;
@@ -64,7 +65,9 @@ export const ShotTable = ({ node }: any) => {
               {data.map((row: ShotData, rowIndex: number) => (
                   <tr key={row.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 align-top">
-                          {row.id}
+                          <div data-block-id={`${baseBlockId}-row-${rowIndex}-id`}>
+                              {row.id}
+                          </div>
                       </td>
                       <td className="px-6 py-4 align-top">
                           <div className="flex gap-2">
@@ -86,10 +89,14 @@ export const ShotTable = ({ node }: any) => {
                           </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 align-top">
-                          {row.duration}
+                          <div data-block-id={`${baseBlockId}-row-${rowIndex}-duration`}>
+                              {row.duration}
+                          </div>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-600 align-top leading-relaxed">
-                          {row.notes}
+                          <div data-block-id={`${baseBlockId}-row-${rowIndex}-notes`}>
+                              <MarkdownPrimitive>{row.notes}</MarkdownPrimitive>
+                          </div>
                       </td>
                   </tr>
               ))}

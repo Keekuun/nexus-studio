@@ -5,6 +5,7 @@ import { ImagePrimitive } from '../primitives/ImagePrimitive'
 import { IconPrimitive } from '../primitives/IconPrimitive'
 import { ButtonPrimitive } from '../primitives/ButtonPrimitive'
 import { ImageViewerPrimitive } from '../primitives/ImageViewerPrimitive'
+import { MarkdownPrimitive } from '../primitives/MarkdownPrimitive'
 
 interface ReferenceItem {
     type: 'image' | 'video';
@@ -74,37 +75,43 @@ export const BriefCard = ({ node }: any) => {
       <div className="p-6">
           {/* Title & Info */}
           <div className="mb-6">
-              <HeadingPrimitive level={2} className="mb-1">{title}</HeadingPrimitive>
-              <p className="text-xs text-gray-500">{date}</p>
+              <div data-block-id={`${baseBlockId}-title`}>
+                <HeadingPrimitive level={2} className="mb-1">{title}</HeadingPrimitive>
+              </div>
+              <div data-block-id={`${baseBlockId}-date`}>
+                <p className="text-xs text-gray-500">{date}</p>
+              </div>
           </div>
 
-          {/* Video Settings */}
+          {/* Video Settings */}   
           <div className="mb-6">
-              <h3 className="text-sm font-semibold text-gray-900 mb-3">Video Settings</h3>
+              <h3 className="text-sm font-semibold text-gray-900 mb-3" data-block-id={`${baseBlockId}-header-video-settings`}>Video Settings</h3>
               <div className="grid grid-cols-3 gap-0 border border-gray-200 rounded-lg divide-x divide-gray-200 bg-white">
                   <div className="p-4 text-center">
-                      <div className="text-xs text-gray-500 mb-1">Duration</div>
-                      <div className="text-lg font-bold text-gray-900">{settings.duration || '-'}</div>
+                      <div className="text-xs text-gray-500 mb-1" data-block-id={`${baseBlockId}-label-duration`}>Duration</div>
+                      <div className="text-lg font-bold text-gray-900" data-block-id={`${baseBlockId}-setting-duration`}>{settings.duration || '-'}</div>
                   </div>
                   <div className="p-4 text-center">
-                      <div className="text-xs text-gray-500 mb-1">Aspect ratio</div>
-                      <div className="text-lg font-bold text-gray-900">{settings.ratio || '-'}</div>
+                      <div className="text-xs text-gray-500 mb-1" data-block-id={`${baseBlockId}-label-ratio`}>Aspect ratio</div>
+                      <div className="text-lg font-bold text-gray-900" data-block-id={`${baseBlockId}-setting-ratio`}>{settings.ratio || '-'}</div>
                   </div>
                   <div className="p-4 text-center">
-                      <div className="text-xs text-gray-500 mb-1">Resolution</div>
-                      <div className="text-lg font-bold text-gray-900">{settings.resolution || '-'}</div>
+                      <div className="text-xs text-gray-500 mb-1" data-block-id={`${baseBlockId}-label-resolution`}>Resolution</div>
+                      <div className="text-lg font-bold text-gray-900" data-block-id={`${baseBlockId}-setting-resolution`}>{settings.resolution || '-'}</div>
                   </div>
               </div>
           </div>
 
           {/* Content Requirements */}
           <div className="mb-6">
-              <h3 className="text-sm font-semibold text-gray-900 mb-3">Content Requirements</h3>
+              <h3 className="text-sm font-semibold text-gray-900 mb-3" data-block-id={`${baseBlockId}-header-content-requirements`}>Content Requirements</h3>
               <div className="bg-gray-50 rounded-lg p-6 space-y-4">
-                  {Object.entries(requirements).map(([key, value]: [string, any]) => (
+                  {Object.entries(requirements).map(([key, value]: [string, any], index) => (
                       <div key={key} className="grid grid-cols-[140px_1fr] gap-4 text-sm">
-                          <div className="font-semibold text-gray-900">{key}</div>
-                          <div className="text-gray-700 whitespace-pre-wrap">{value}</div>
+                          <div className="font-semibold text-gray-900" data-block-id={`${baseBlockId}-req-${index}-key`}>{key}</div>
+                          <div className="text-gray-700 whitespace-pre-wrap" data-block-id={`${baseBlockId}-req-${index}-val`}>
+                            <MarkdownPrimitive>{value}</MarkdownPrimitive>
+                          </div>
                       </div>
                   ))}
               </div>
@@ -112,7 +119,7 @@ export const BriefCard = ({ node }: any) => {
 
           {/* Reference */}
           <div>
-              <h3 className="text-sm font-semibold text-gray-900 mb-3">Reference</h3>
+              <h3 className="text-sm font-semibold text-gray-900 mb-3" data-block-id={`${baseBlockId}-header-reference`}>Reference</h3>
               {/* Using a custom masonry-like flex approach for more control over visual gap filling */}
               <div className="flex flex-col md:flex-row gap-4">
                   {/* Column 1 */}
