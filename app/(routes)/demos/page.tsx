@@ -18,6 +18,14 @@ export default function DemosPage(): JSX.Element {
       tags: ["Canvas", "Fabric.js", "Markdown", "图片处理"],
       status: "已完成",
     },
+    {
+      id: "feishu-doc",
+      title: "类飞书文档交互",
+      description: "Tiptap + React 实现的文档交互，支持嵌套 Block 高亮、边缘检测、评论锚定等功能",
+      href: "/demos/feishu-doc",
+      tags: ["Tiptap", "ProseMirror", "Block Selection", "Comments"],
+      status: "已完成",
+    },
     // 后续可以在这里添加更多案例
     // {
     //   id: "example-demo",

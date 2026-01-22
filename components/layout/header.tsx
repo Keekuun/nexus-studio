@@ -49,6 +49,9 @@ export function Header(): JSX.Element {
             <Link href="/studio">工作室</Link>
           </Button>
           <Button variant="ghost" asChild>
+            <Link href="/demos">案例演示</Link>
+          </Button>
+          <Button variant="ghost" asChild>
             <Link href="/ai">AI助手</Link>
           </Button>
         </nav>
