@@ -25,7 +25,7 @@ export default function RootLayout({
           <Header />
           <div className="flex flex-1">
             <Sidebar />
-            <main className="flex flex-1">{children}</main>
+            <main className="flex flex-1 justify-center">{children}</main>
           </div>
           <Footer />
         </ErrorBoundary>

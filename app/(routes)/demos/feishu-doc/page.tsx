@@ -4,6 +4,8 @@ import React, { useState, useMemo } from 'react';
 import { DocEditor } from './components/DocEditor';
 import { CommentSidebar } from './components/CommentSidebar';
 
+import Link from 'next/link';
+
 export interface Comment {
     id: string;
     author: string;
@@ -83,12 +85,22 @@ export default function FeishuDocDemo() {
   return (
     <div className="flex w-full bg-gray-50 overflow-hidden">
       <div className="flex-1 flex flex-col h-full overflow-hidden relative">
-        <header className="h-14 border-b bg-white flex items-center px-4 shrink-0 z-10">
-          <h1 className="font-semibold text-lg">Feishu Doc Demo</h1>
-          <p className="ml-4 text-sm text-gray-500">
-            Hover blocks to see highlights. Click to select and comment. 
-            Inner blocks vs Outer blocks detection enabled.
-          </p>
+        <header className="h-14 border-b bg-white flex items-center px-4 shrink-0 z-10 justify-between">
+          <div className="flex items-center">
+            <h1 className="font-semibold text-lg">Feishu Doc Demo</h1>
+            <p className="ml-4 text-sm text-gray-500">
+              Hover blocks to see highlights. Click to select and comment. 
+              Inner blocks vs Outer blocks detection enabled.
+            </p>
+          </div>
+          <div>
+            <Link 
+              href="/demos/feishu-doc/spec" 
+              className="text-sm font-medium text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-md transition-colors"
+            >
+              技术方案文档
+            </Link>
+          </div>
         </header>
         <div className="flex flex-1 overflow-hidden">
              <main className="flex-1 overflow-y-auto p-8 flex justify-center bg-gray-50">
