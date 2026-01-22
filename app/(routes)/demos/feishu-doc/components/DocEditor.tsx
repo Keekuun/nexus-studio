@@ -1,64 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { useEditor, EditorContent, ReactNodeViewRenderer, NodeViewWrapper, NodeViewContent } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
-import { Node, mergeAttributes, Extension } from '@tiptap/core';
-import Placeholder from '@tiptap/extension-placeholder';
-import Image from '@tiptap/extension-image';
-
-// --- Extensions ---
-
-// 1. BlockID Extension (Simplified)
-const BlockId = Extension.create({
-  name: 'blockId',
-  addGlobalAttributes() {
-    return [
-      {
-        types: ['paragraph', 'heading', 'image', 'blockquote', 'section', 'bulletList', 'orderedList'],
-        attributes: {
-          blockId: {
-            default: null,
-            parseHTML: (element: HTMLElement) => element.getAttribute('data-block-id'),
-            renderHTML: (attributes: Record<string, any>) => {
-              if (!attributes.blockId) {
-                return {}
-              }
-              return {
-                'data-block-id': attributes.blockId,
-              }
-            },
-          },
-        },
-      },
-    ];
-  },
-});
-
-// 2. Section Node (Container)
-const Section = Node.create({
-  name: 'section',
-  group: 'block',
-  content: 'block+',
-  draggable: true,
-  
-  addAttributes() {
-    return {
-      blockId: {
-        default: null,
-      },
-      class: {
-        default: 'section-block',
-      }
-    }
-  },
-
-  parseHTML() {
-    return [{ tag: 'div[data-type="section"]' }]
-  },
-
-  renderHTML({ HTMLAttributes }: { HTMLAttributes: Record<string, any> }) {
-    return ['div', mergeAttributes(HTMLAttributes, { 'data-type': 'section', class: 'section-block border-2 border-transparent hover:border-gray-100 transition-colors p-6 rounded-xl my-4 bg-gray-50/30' }), 0]
-  },
-});
+import { useEditor, EditorContent } from '@tiptap/react';
+import { getExtensions } from './registry';
 
 // --- Mock Data ---
 const initialContent = {
@@ -68,6 +10,175 @@ const initialContent = {
       type: 'heading',
       attrs: { level: 1, blockId: 'block-1' },
       content: [{ type: 'text', text: 'Project Phoenix Specification' }],
+    },
+    {
+        type: 'shotTable',
+        attrs: {
+            blockId: 'shot-table-1',
+            data: [
+                {
+                    id: 1,
+                    images: ['https://images.unsplash.com/photo-1550751827-4bd374c3f58b'],
+                    duration: '10s',
+                    notes: 'Use deep red tones with angled volumetric light cutting through subtle haze to create a premium, mysterious focal point that enhances the product\'s material quality.'
+                },
+                {
+                    id: 2,
+                    images: [
+                        'https://images.unsplash.com/photo-1519389950473-47ba0277781c',
+                        'https://images.unsplash.com/photo-1555099962-4199c345e5dd'
+                    ],
+                    duration: '8s',
+                    notes: 'Use deep red tones with angled volumetric light cutting through subtle haze to create a premium, mysterious focal point that enhances the product\'s material quality.'
+                },
+                {
+                    id: 3,
+                    images: ['https://images.unsplash.com/photo-1512820790803-83ca734da794'],
+                    duration: '7s',
+                    notes: 'Reuse of brand-provided character drawing to ensure identity consistency; requires technical post-processing for transparency.'
+                },
+                {
+                    id: 4,
+                    images: ['https://images.unsplash.com/photo-1535713875002-d1d0cf377fde'],
+                    duration: '8s',
+                    notes: 'Essential prop for establishing the classic "late for school" anime trope.'
+                },
+                {
+                    id: 5,
+                    images: [
+                        'https://images.unsplash.com/photo-1514565131-fce0801e5785',
+                        'https://images.unsplash.com/photo-1506905925346-21bda4d32df4'
+                    ],
+                    duration: '4s',
+                    notes: 'Essential prop for establishing the classic "late for school" anime trope.'
+                }
+            ]
+        }
+    },
+    {
+        type: 'briefCard',
+        attrs: {
+            blockId: 'brief-1',
+            title: 'Brief V2 Reference Picture Added',
+            date: '2025-2-15 · 14:05',
+            settings: {
+                duration: '15s',
+                ratio: '16:9',
+                resolution: '1080p'
+            },
+            requirements: {
+                'Product Name': 'Thank you for providing all the details',
+                'Product link': 'blackhead.com/product/3082908blackhead.com/produc',
+                'Primary Platform': 'TikTok, Youtube',
+                'Core selling points': 'Thank you for providing all the details! I have summarized everything we\'ve discussed for your review. Please confirm that all the information is accurate.'
+            },
+            references: [
+                { type: 'image', src: 'https://images.unsplash.com/photo-1618331835717-801e976710b2' }, // Tall 9:16
+                { type: 'video', src: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb' }, // Standard 16:9 thumb
+                { type: 'image', src: 'https://images.unsplash.com/photo-1600607686527-6fb886090705' }, // Square-ish
+                { type: 'image', src: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b' }, // Landscape
+                { type: 'image', src: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c' },  // Portrait
+                { type: 'image', src: 'https://images.unsplash.com/photo-1618331835717-801e976710b2' }, // Tall again
+                { type: 'image', src: 'https://images.unsplash.com/photo-1515378960530-7c0da6231fb1' }, // Tech wide
+                { type: 'video', src: 'https://images.unsplash.com/photo-1492633423870-43d1cd2775eb' }  // Action shot
+            ]
+        }
+    },
+    {
+        type: 'creativePlanning',
+        attrs: {
+            blockId: 'creative-1',
+            title: 'V2 - Creative Confirmation',
+            date: '2025-2-15 · 14:05',
+            tabs: [
+                { label: 'Concept 1', tag: 'Product-First', color: 'blue', active: true },
+                { label: 'Concept 2', tag: 'Story-Driven', color: 'orange', active: false },
+                { label: 'Concept 3', tag: 'High-Impact', color: 'yellow', active: false },
+            ]
+        },
+        content: [
+            // Reusing StoryCard 1
+            {
+                type: 'storyCard',
+                attrs: {
+                    blockId: 'creative-story-1',
+                    title: 'The Morning Miracle',
+                    images: [
+                        { number: '01', title: 'CITY DUSK', src: 'https://images.unsplash.com/photo-1514565131-fce0801e5785' },
+                        { number: '02', title: 'WARM ENTRANCE', src: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c' },
+                        { number: '03', title: 'MOONLIT REFLECTION', src: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b' },
+                        { number: '04', title: 'SERENE PORTRAIT', src: 'https://images.unsplash.com/photo-1555099962-4199c345e5dd' },
+                        { number: '05', title: 'NIGHT RITUAL', src: 'https://images.unsplash.com/photo-1512820790803-83ca734da794' }
+                    ]
+                },
+                content: [
+                    {
+                        type: 'heading',
+                        attrs: { level: 3, blockId: 'creative-h1' },
+                        content: [{ type: 'text', text: 'Core Creative' }]
+                    },
+                    {
+                        type: 'paragraph',
+                        attrs: { blockId: 'creative-p1' },
+                        content: [{ type: 'text', text: 'An organic construction of silver filaments in a white void that solidifies into body architecture on a cold, confident model.' }]
+                    },
+                    {
+                        type: 'heading',
+                        attrs: { level: 3, blockId: 'creative-h2' },
+                        content: [{ type: 'text', text: 'Outline' }]
+                    },
+                    {
+                        type: 'bulletList',
+                        attrs: { blockId: 'creative-list-1' },
+                        content: [
+                            { type: 'listItem', content: [{ type: 'paragraph', attrs: { blockId: 'creative-li-1' }, content: [{ type: 'text', text: 'Mascot walks along a sunny school path holding a slice of toast in its mouth.' }] }] },
+                            { type: 'listItem', content: [{ type: 'paragraph', attrs: { blockId: 'creative-li-2' }, content: [{ type: 'text', text: 'Mascot stops as a magical golden swirl of energy envelops its body in a bright flash.' }] }] },
+                            { type: 'listItem', content: [{ type: 'paragraph', attrs: { blockId: 'creative-li-3' }, content: [{ type: 'text', text: 'Sailor Moon Mascot strikes a signature heroic pose in front of a glowing crescent moon backdrop.' }] }] }
+                        ]
+                    }
+                ]
+            },
+            // Another StoryCard for "The 9-to-5 & Beyond"
+            {
+                type: 'storyCard',
+                attrs: {
+                    blockId: 'creative-story-2',
+                    title: 'The "9-to-5 & Beyond"',
+                    images: [
+                        { number: '01', title: 'Celestial Bag', src: 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa' },
+                        { number: '02', title: 'Quilted Detail', src: 'https://images.unsplash.com/photo-1584917865442-de89df76afd3' },
+                        { number: '03', title: 'Golden Chain', src: 'https://images.unsplash.com/photo-1591561954557-26941169b49e' },
+                        { number: '04', title: 'Night Style', src: 'https://images.unsplash.com/photo-1575296093822-98cbf4f0353c' }
+                    ]
+                },
+                content: [
+                    {
+                        type: 'heading',
+                        attrs: { level: 3, blockId: 'creative-h3' },
+                        content: [{ type: 'text', text: 'Core Creative' }]
+                    },
+                    {
+                        type: 'paragraph',
+                        attrs: { blockId: 'creative-p2' },
+                        content: [{ type: 'text', text: 'A seamless transition from day to night, highlighting the versatility of the accessory collection.' }]
+                    },
+                    {
+                        type: 'heading',
+                        attrs: { level: 3, blockId: 'creative-h4' },
+                        content: [{ type: 'text', text: 'Outline' }]
+                    },
+                    {
+                        type: 'bulletList',
+                        attrs: { blockId: 'creative-list-2' },
+                        content: [
+                            { type: 'listItem', content: [{ type: 'paragraph', attrs: { blockId: 'creative-li-4' }, content: [{ type: 'text', text: 'Office setting: Sharp focus on the bag\'s structure and practicality.' }] }] },
+                            { type: 'listItem', content: [{ type: 'paragraph', attrs: { blockId: 'creative-li-5' }, content: [{ type: 'text', text: 'Quick cut transition: The same bag styled for an evening event.' }] }] },
+                            { type: 'listItem', content: [{ type: 'paragraph', attrs: { blockId: 'creative-li-6' }, content: [{ type: 'text', text: 'Close-up on hardware details shimmering under city lights.' }] }] }
+                        ]
+                    }
+                ]
+            }
+        ]
     },
     {
       type: 'paragraph',
@@ -123,6 +234,113 @@ const initialContent = {
     {
       type: 'paragraph',
       attrs: { blockId: 'block-7' },
+      content: [
+          { type: 'text', text: 'Status: ' },
+          { type: 'tag', attrs: { label: 'In Progress', color: 'blue' } },
+          { type: 'text', text: ' Priority: ' },
+          { type: 'tag', attrs: { label: 'High', color: 'red' } }
+      ],
+    },
+    {
+        type: 'imageBlock',
+        attrs: {
+            blockId: 'img-1',
+            src: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b',
+            alt: 'Tech Stack',
+            caption: 'Figure 1: Modern Tech Stack Architecture'
+        }
+    },
+    {
+        type: 'imageGallery',
+        attrs: {
+            blockId: 'gallery-1',
+            images: [
+                { src: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b', alt: 'Tech 1' },
+                { src: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c', alt: 'Tech 2' },
+                { src: 'https://images.unsplash.com/photo-1555099962-4199c345e5dd', alt: 'Tech 3' }
+            ]
+        }
+    },
+    {
+        type: 'cardBlock',
+        attrs: { blockId: 'card-1', title: 'Action Items' },
+        content: [
+            {
+                type: 'paragraph',
+                attrs: { blockId: 'card-p-1' },
+                content: [{ type: 'text', text: '1. Review API specifications' }]
+            },
+            {
+                type: 'paragraph',
+                attrs: { blockId: 'card-p-2' },
+                content: [{ type: 'text', text: '2. Setup CI/CD pipeline' }]
+            }
+        ]
+    },
+    {
+        type: 'tableBlock',
+        attrs: {
+            blockId: 'table-1',
+            data: [
+                ['Feature', 'Status', 'Owner'],
+                ['Auth', 'Done', 'Alex'],
+                ['Database', 'In Progress', 'Sam'],
+                ['UI', 'Pending', 'Jordan']
+            ]
+        }
+    },
+    {
+        type: 'storyCard',
+        attrs: {
+            blockId: 'story-1',
+            title: 'The Morning Miracle',
+            images: [
+                { number: '01', title: 'CITY DUSK', src: 'https://images.unsplash.com/photo-1514565131-fce0801e5785' },
+                { number: '02', title: 'WARM ENTRANCE', src: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c' },
+                { number: '03', title: 'MOONLIT REFLECTION', src: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b' },
+                { number: '04', title: 'SERENE PORTRAIT', src: 'https://images.unsplash.com/photo-1555099962-4199c345e5dd' },
+                { number: '05', title: 'NIGHT RITUAL', src: 'https://images.unsplash.com/photo-1512820790803-83ca734da794' }
+            ]
+        },
+        content: [
+            {
+                type: 'heading',
+                attrs: { level: 3, blockId: 'story-h1' },
+                content: [{ type: 'text', text: 'Core Creative' }]
+            },
+            {
+                type: 'paragraph',
+                attrs: { blockId: 'story-p1' },
+                content: [{ type: 'text', text: 'An organic construction of silver filaments in a white void that solidifies into body architecture on a cold, confident model.' }]
+            },
+            {
+                type: 'heading',
+                attrs: { level: 3, blockId: 'story-h2' },
+                content: [{ type: 'text', text: 'Outline' }]
+            },
+            {
+                type: 'bulletList',
+                attrs: { blockId: 'story-list' },
+                content: [
+                    {
+                        type: 'listItem',
+                        content: [{ type: 'paragraph', attrs: { blockId: 'story-li-1' }, content: [{ type: 'text', text: 'Mascot walks along a sunny school path holding a slice of toast in its mouth.' }] }]
+                    },
+                    {
+                        type: 'listItem',
+                        content: [{ type: 'paragraph', attrs: { blockId: 'story-li-2' }, content: [{ type: 'text', text: 'Mascot stops as a magical golden swirl of energy envelops its body in a bright flash.' }] }]
+                    },
+                    {
+                        type: 'listItem',
+                        content: [{ type: 'paragraph', attrs: { blockId: 'story-li-3' }, content: [{ type: 'text', text: 'Sailor Moon Mascot strikes a signature heroic pose in front of a glowing crescent moon backdrop.' }] }]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+      type: 'paragraph',
+      attrs: { blockId: 'block-end' },
       content: [{ type: 'text', text: 'End of document.' }],
     },
   ],
@@ -143,13 +361,7 @@ export function DocEditor({ setActiveBlockId, activeBlockId, commentedBlockIds =
 
   const editor = useEditor({
     immediatelyRender: false,
-    extensions: [
-      StarterKit,
-      Placeholder.configure({ placeholder: 'Type something...' }),
-      Image,
-      BlockId,
-      Section,
-    ],
+    extensions: getExtensions(),
     content: initialContent,
     editorProps: {
         attributes: {
@@ -217,14 +429,16 @@ export function DocEditor({ setActiveBlockId, activeBlockId, commentedBlockIds =
       if (hoveredBlockId) {
           setActiveBlockId(hoveredBlockId);
           // Also update the click rect to match the current hover rect
-          if (hoverRect) {
-              setClickRect(hoverRect);
+          // But re-calculate it to ensure it's up to date
+          const el = document.querySelector(`[data-block-id="${hoveredBlockId}"]`);
+          if (el) {
+              setClickRect(el.getBoundingClientRect());
           }
       } else {
           setActiveBlockId(null);
           setClickRect(null);
       }
-  }, [hoveredBlockId, hoverRect, setActiveBlockId]);
+  }, [hoveredBlockId, setActiveBlockId]);
 
   // Calculate Rects for overlays
   const calculateRects = useCallback(() => {
@@ -236,7 +450,15 @@ export function DocEditor({ setActiveBlockId, activeBlockId, commentedBlockIds =
          }
      }
 
-     // 2. Commented Blocks (Background Highlights)
+     // 2. Hovered Block (Re-calc to sync with scroll)
+     if (hoveredBlockId) {
+         const el = document.querySelector(`[data-block-id="${hoveredBlockId}"]`);
+         if (el) {
+             setHoverRect(el.getBoundingClientRect());
+         }
+     }
+
+     // 3. Commented Blocks (Background Highlights)
      const newCommentedRects: Array<{ id: string, rect: DOMRect }> = [];
      commentedBlockIds.forEach(id => {
          // Skip active block to avoid double overlay (or handle via z-index)
@@ -252,7 +474,7 @@ export function DocEditor({ setActiveBlockId, activeBlockId, commentedBlockIds =
      });
      setCommentedRects(newCommentedRects);
 
-  }, [activeBlockId, commentedBlockIds]);
+  }, [activeBlockId, hoveredBlockId, commentedBlockIds]);
 
   // Recalculate click rect if window resizes or scroll happens
   useEffect(() => {
