@@ -6,17 +6,30 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
+    "lint:fix": "eslint --fix .",
+    "format": "prettier --write .",
     "type-check": "tsc --noEmit",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "server:collaboration": "tsx server/collaboration-server.ts",
-    "dev:all": "concurrently \"pnpm run dev\" \"pnpm run server:collaboration\""
+    "dev:all": "concurrently \"pnpm run dev\" \"pnpm run server:collaboration\"",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "prettier --write",
+      "eslint --fix --quiet"
+    ],
+    "*.{css,scss,md,json}": [
+      "prettier --write"
+    ]
   },
   "dependencies": {
     "@hocuspocus/provider": "^3.4.3",
     "@hocuspocus/server": "^3.4.3",
+    "@radix-ui/react-avatar": "^1.1.11",
     "@radix-ui/react-slot": "^1.2.4",
     "@tiptap/core": "^3.16.0",
     "@tiptap/extension-collaboration": "^3.13.0",
@@ -31,7 +44,9 @@
     "fabric": "^5.3.0",
     "html2canvas": "^1.4.1",
     "katex": "^0.16.27",
+    "lucide-react": "^0.562.0",
     "mermaid": "^11.12.2",
+    "nanoid": "^5.1.6",
     "next": "^15.1.6",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -43,6 +58,9 @@
     "remark-cjk-friendly": "^1.2.3",
     "remark-gfm": "^4.0.1",
     "remark-math": "^6.0.0",
+    "slate": "^0.123.0",
+    "slate-history": "^0.113.1",
+    "slate-react": "^0.123.0",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
     "y-prosemirror": "^1.3.7",
@@ -51,6 +69,7 @@
     "zustand": "^5.0.9"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.3",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.1",
     "@testing-library/user-event": "^14.6.1",
@@ -66,10 +85,13 @@
     "concurrently": "^9.2.1",
     "eslint": "^9.18.0",
     "eslint-config-next": "^15.1.6",
+    "husky": "^9.1.7",
     "jest": "^30.2.0",
     "jest-environment-jsdom": "^30.2.0",
+    "lint-staged": "^16.2.7",
     "postcss": "^8.4.49",
     "prettier": "^3.7.4",
+    "prettier-plugin-tailwindcss": "^0.7.2",
     "tailwindcss": "^3.4.17",
     "tsx": "^4.21.0",
     "typescript": "^5.7.2",

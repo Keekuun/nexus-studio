@@ -37,7 +37,7 @@ export function CanvasAnnotation({
   // 工具栏与画布层需要共享同一个 fabric canvas 实例：
   // - 画布层负责初始化/销毁
   // - 工具栏层只负责操作（不允许重复初始化）
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   const fabricCanvasRef = (externalFabricCanvasRef ??
     internalFabricCanvasRef) as React.MutableRefObject<any>;
   const [tool, setTool] = useState<ToolType>("pen");
@@ -60,7 +60,10 @@ export function CanvasAnnotation({
     return value ?? null;
   };
 
-  const createCircleCursor = (diameterPx: number, stroke = "#111827"): string => {
+  const createCircleCursor = (
+    diameterPx: number,
+    stroke = "#111827"
+  ): string => {
     // clamp，避免过大导致 cursor data-uri 超长/不稳定
     const size = Math.max(10, Math.min(80, Math.round(diameterPx)));
     const r = Math.max(2, Math.floor(size / 2) - 1);
@@ -98,7 +101,11 @@ export function CanvasAnnotation({
     return `url("data:image/svg+xml,${encoded}") ${cx} ${cy}, auto`;
   };
 
-  const applyCursorForTool = (canvas: any, currentTool: ToolType, currentWidth: number): void => {
+  const applyCursorForTool = (
+    canvas: any,
+    currentTool: ToolType,
+    currentWidth: number
+  ): void => {
     try {
       const applyDomCursor = (cursorValue: string): void => {
         // Fabric 在交互时最终取的通常是 upperCanvasEl 的 DOM cursor
@@ -161,7 +168,7 @@ export function CanvasAnnotation({
       // 获取文章容器的尺寸，如果没有则使用默认值（后续会通过 syncSize 更新）
       let initialWidth = 600;
       let initialHeight = 800;
-      
+
       if (articleRef.current) {
         const rect = articleRef.current.getBoundingClientRect();
         initialWidth = rect.width || 600;
@@ -254,7 +261,14 @@ export function CanvasAnnotation({
         }
       }
     };
-  }, [canvasRef, showToolbarOnly, articleRef, brushWidth, brushColor, fabricCanvasRef]);
+  }, [
+    canvasRef,
+    showToolbarOnly,
+    articleRef,
+    brushWidth,
+    brushColor,
+    fabricCanvasRef,
+  ]);
 
   /**
    * 更新画笔样式
@@ -287,23 +301,26 @@ export function CanvasAnnotation({
 
     const syncSize = () => {
       if (!articleRef.current || !fabricCanvasRef.current) return;
-      
+
       // 获取文章容器的实际尺寸（使用 scrollWidth/scrollHeight 获取完整内容尺寸）
       // 必须使用 scrollWidth/scrollHeight，与文章截图保持一致
       const scrollWidth = articleRef.current.scrollWidth;
       const scrollHeight = articleRef.current.scrollHeight;
       const articleRect = articleRef.current.getBoundingClientRect();
-      
+
       // 使用 scrollWidth/scrollHeight（与 html2canvas 保持一致）
       const width = scrollWidth || articleRect.width;
       const height = scrollHeight || articleRect.height;
-      
+
       // 确保画布尺寸完全匹配文章容器
       const currentWidth = fabricCanvasRef.current.getWidth();
       const currentHeight = fabricCanvasRef.current.getHeight();
-      
+
       // 只有当尺寸发生变化时才更新，避免不必要的重绘
-      if (Math.abs(currentWidth - width) > 1 || Math.abs(currentHeight - height) > 1) {
+      if (
+        Math.abs(currentWidth - width) > 1 ||
+        Math.abs(currentHeight - height) > 1
+      ) {
         fabricCanvasRef.current.setDimensions({
           width: width,
           height: height,
@@ -314,7 +331,7 @@ export function CanvasAnnotation({
 
     // 立即执行一次
     syncSize();
-    
+
     // 使用 ResizeObserver 监听文章容器尺寸变化
     let resizeObserver: ResizeObserver | null = null;
     if (typeof ResizeObserver !== "undefined" && articleRef.current) {
@@ -324,10 +341,10 @@ export function CanvasAnnotation({
       });
       resizeObserver.observe(articleRef.current);
     }
-    
+
     // 延迟执行，确保 DOM 已完全渲染
     const timer = setTimeout(syncSize, 200);
-    
+
     // 监听窗口大小变化
     window.addEventListener("resize", syncSize);
     // 监听滚动事件（可能影响布局）
@@ -370,7 +387,7 @@ export function CanvasAnnotation({
 
     // 完全禁用绘制模式，确保可以正常选择和操作对象
     canvas.isDrawingMode = false;
-    
+
     // 清除当前选择状态（可选）
     canvas.discardActiveObject();
     canvas.renderAll();
@@ -401,9 +418,11 @@ export function CanvasAnnotation({
           // - 主画布继续执行真实擦除（destination-out）
           // - 顶层 contextTop 只画一条白色半透明的“轨迹预览”（不做 pattern 遮罩）
           try {
-            const pencilRender = (fabric as any).PencilBrush?.prototype?._render;
+            const pencilRender = (fabric as any).PencilBrush?.prototype
+              ?._render;
             if (typeof pencilRender === "function") {
-              const originalSetBrushStyles = (eraserBrush as any)._setBrushStyles;
+              const originalSetBrushStyles = (eraserBrush as any)
+                ._setBrushStyles;
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               (eraserBrush as any)._setBrushStyles = function (ctx: any) {
                 if (typeof originalSetBrushStyles === "function") {
@@ -483,7 +502,7 @@ export function CanvasAnnotation({
     }
 
     const canvas = fabricCanvasRef.current;
-    
+
     // 如果点击的是已有对象，不创建新对象（允许选择和操作）
     if (e.target && e.target !== canvas) {
       return;
@@ -592,7 +611,7 @@ export function CanvasAnnotation({
   if (showToolbarOnly) {
     const brushWidthMax = tool === "eraser" ? 120 : 20;
     return (
-      <div className="flex flex-wrap items-center gap-2 p-2 bg-gray-50 rounded-lg border border-gray-200">
+      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 p-2">
         <div className="flex gap-1">
           <Button
             size="sm"
@@ -657,8 +676,12 @@ export function CanvasAnnotation({
             value={brushColor}
             onChange={(e) => setBrushColor(e.target.value)}
             disabled={tool === "eraser"}
-            title={tool === "eraser" ? "橡皮擦不需要颜色（擦除通过合成模式实现）" : "选择画笔颜色"}
-            className="w-10 h-8 rounded border border-gray-300 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+            title={
+              tool === "eraser"
+                ? "橡皮擦不需要颜色（擦除通过合成模式实现）"
+                : "选择画笔颜色"
+            }
+            className="h-8 w-10 cursor-pointer rounded border border-gray-300 disabled:cursor-not-allowed disabled:opacity-60"
           />
         </div>
 
@@ -672,7 +695,7 @@ export function CanvasAnnotation({
             onChange={(e) => setBrushWidth(Number(e.target.value))}
             className="w-20"
           />
-          <span className="text-sm text-gray-600 w-8">{brushWidth}px</span>
+          <span className="w-8 text-sm text-gray-600">{brushWidth}px</span>
         </div>
 
         <div className="flex gap-1">
@@ -680,7 +703,12 @@ export function CanvasAnnotation({
             <span aria-hidden>↩️</span>
             <span className="sr-only">撤销</span>
           </Button>
-          <Button size="sm" variant="outline" onClick={handleClear} title="清空">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleClear}
+            title="清空"
+          >
             <span aria-hidden>🗑️</span>
             <span className="sr-only">清空</span>
           </Button>
@@ -690,16 +718,13 @@ export function CanvasAnnotation({
   }
 
   return (
-    <div className="absolute inset-0 pointer-events-auto">
+    <div className="pointer-events-auto absolute inset-0">
       {/* 画布容器 - 完全覆盖文章区域 */}
-      <canvas 
-        ref={canvasRef} 
-        className="block w-full h-full" 
-      />
+      <canvas ref={canvasRef} className="block h-full w-full" />
 
       {isDrawing && (
-        <div className="absolute bottom-4 right-4 z-10 pointer-events-none">
-          <div className="bg-black/50 text-white px-3 py-1 rounded text-sm">
+        <div className="pointer-events-none absolute bottom-4 right-4 z-10">
+          <div className="rounded bg-black/50 px-3 py-1 text-sm text-white">
             正在绘制中...
           </div>
         </div>
@@ -707,4 +732,3 @@ export function CanvasAnnotation({
     </div>
   );
 }
-

@@ -16,12 +16,13 @@ export default function CanvasAnnotationPage(): JSX.Element {
   const fabricCanvasRef = useRef<any>(null); // 用于访问 fabric canvas 实例
   const overlayRef = useRef<HTMLDivElement>(null); // 批注蒙层引用
   const [isMerging, setIsMerging] = useState(false);
-  const [screenshotMethod, setScreenshotMethod] = useState<"html2canvas" | "system" | "snapdom">("html2canvas");
-  const [systemScreenshotSupported, setSystemScreenshotSupported] = useState(false);
+  const [screenshotMethod, setScreenshotMethod] = useState<
+    "html2canvas" | "system" | "snapdom"
+  >("html2canvas");
+  const [systemScreenshotSupported, setSystemScreenshotSupported] =
+    useState(false);
   const [snapdomSupported, setSnapdomSupported] = useState(false);
   const [isAnnotating, setIsAnnotating] = useState(true); // 批注模式开关：开时显示画布，关时便于操作视频控件
-  const sleep = (ms: number): Promise<void> =>
-    new Promise((resolve) => setTimeout(resolve, ms));
 
   // 在客户端检查系统截图支持（避免 hydration 错误）
   useEffect(() => {
@@ -152,7 +153,7 @@ Hooks 让函数组件变得更加强大和灵活，是现代 React 开发的标�
       if (!video.getAttribute("crossorigin")) {
         video.setAttribute("crossorigin", "anonymous");
       }
-      
+
       // 等待下一帧渲染，避免 seek/暂停导致闪烁
       // 添加超时机制，避免无限等待
       try {
@@ -161,11 +162,11 @@ Hooks 让函数组件变得更加强大和灵活，是现代 React 开发的标�
             new Promise<void>((resolve) =>
               (video as any).requestVideoFrameCallback(() => resolve())
             ),
-            sleep(500), // 500ms 超时
+            new Promise<void>((resolve) => setTimeout(resolve, 500)), // 500ms 超时
           ]);
         } else {
           // 未支持 rVFC 时，短暂等待一帧
-          await sleep(30);
+          await new Promise<void>((resolve) => setTimeout(resolve, 30));
         }
       } catch (e) {
         // 如果等待失败，继续执行（可能视频未播放或 API 不支持）
@@ -187,7 +188,7 @@ Hooks 让函数组件变得更加强大和灵活，是现代 React 开发的标�
         console.warn("无法创建画布上下文");
         return null;
       }
-      
+
       try {
         ctx.drawImage(video, 0, 0, width, height);
         const dataUrl = tempCanvas.toDataURL("image/png");
@@ -364,7 +365,7 @@ Hooks 让函数组件变得更加强大和灵活，是现代 React 开发的标�
       const videoTrack = stream.getVideoTracks()[0];
       const imageCapture = new ImageCapture(videoTrack);
       // ImageCapture.grabFrame() 返回 ImageBitmap，但类型定义可能不完整
-      const bitmap = await (imageCapture as any).grabFrame() as ImageBitmap;
+      const bitmap = (await (imageCapture as any).grabFrame()) as ImageBitmap;
 
       // 4. 停止流（释放系统资源）
       videoTrack.stop();
@@ -471,14 +472,17 @@ Hooks 让函数组件变得更加强大和灵活，是现代 React 开发的标�
     // 先确保视频停留在首帧，获取快照映射
     const videoSnapshotMap = await prepareVideoSnapshots();
 
-    const videoReplacements: Array<{ video: HTMLVideoElement; img: HTMLImageElement }> = [];
+    const videoReplacements: Array<{
+      video: HTMLVideoElement;
+      img: HTMLImageElement;
+    }> = [];
 
     try {
       // 1. 将视频元素替换为快照图片（SnapDOM 无法处理 video，常见表现是黑块）
       const videos = Array.from(
         articleRef.current.querySelectorAll<HTMLVideoElement>("video")
       );
-      
+
       videos.forEach((video) => {
         const id = video.getAttribute("data-video-snapshot-id");
         if (!id) return;
@@ -488,7 +492,7 @@ Hooks 让函数组件变得更加强大和灵活，是现代 React 开发的标�
         // 创建图片元素替换视频
         const img = document.createElement("img");
         img.src = snapshot;
-        
+
         // 保持视频的样式和尺寸
         const videoStyle = window.getComputedStyle(video);
         img.style.width = videoStyle.width || "100%";
@@ -497,7 +501,7 @@ Hooks 让函数组件变得更加强大和灵活，是现代 React 开发的标�
         img.style.objectFit = "cover";
         img.style.borderRadius = videoStyle.borderRadius || "8px";
         img.style.border = videoStyle.border || "1px solid #e5e7eb";
-        
+
         // 复制类名
         if (video.className) {
           img.className = video.className;
@@ -615,20 +619,23 @@ Hooks 让函数组件变得更加强大和灵活，是现代 React 开发的标�
     try {
       videoSnapshotMap = await prepareVideoSnapshots();
     } catch (error) {
-      console.warn("视频快照预处理失败，继续截图（视频可能显示为空白）:", error);
+      console.warn(
+        "视频快照预处理失败，继续截图（视频可能显示为空白）:",
+        error
+      );
     }
 
     // 获取容器的实际尺寸和位置
     const rect = articleRef.current.getBoundingClientRect();
     const scrollHeight = articleRef.current.scrollHeight;
     const scrollWidth = articleRef.current.scrollWidth;
-    
+
     // 获取设备像素比，确保截图清晰度
     const dpr = window.devicePixelRatio || 1;
-    
+
     // 等待内容完全渲染
     await new Promise((resolve) => setTimeout(resolve, 100));
-    
+
     // 等待下一帧，确保所有渲染完成
     await new Promise((resolve) => requestAnimationFrame(resolve));
 
@@ -649,58 +656,66 @@ Hooks 让函数组件变得更加强大和灵活，是现代 React 开发的标�
       // 在克隆文档中处理 oklch 颜色 - 只转换颜色属性，保留布局
       onclone: (clonedDoc, element) => {
         // 第一步：移除所有样式表链接和 style 标签，避免 html2canvas 解析样式表中的 oklch
-        const styleSheets = clonedDoc.querySelectorAll('link[rel="stylesheet"], style');
+        const styleSheets = clonedDoc.querySelectorAll(
+          'link[rel="stylesheet"], style'
+        );
         styleSheets.forEach((sheet) => {
           sheet.remove();
         });
-        
+
         // 第二步：转换关键样式（颜色 + 段落间距），尽量保持原有布局
         const allElements = clonedDoc.querySelectorAll("*");
-        const originalElements = articleRef.current?.querySelectorAll("*") || [];
-        
+        const originalElements =
+          articleRef.current?.querySelectorAll("*") || [];
+
         allElements.forEach((clonedElement, index) => {
           const htmlElement = clonedElement as HTMLElement;
           const originalElement = originalElements[index] as HTMLElement;
-          
+
           if (!originalElement) return;
-          
+
           try {
             // 获取原始元素的计算样式
             const computedStyle = window.getComputedStyle(originalElement);
-            
+
+            if (computedStyle.display === "none") return;
+
             // 颜色相关属性
             const colorProperties = [
-              'backgroundColor',
-              'color',
-              'borderColor',
-              'borderTopColor',
-              'borderRightColor',
-              'borderBottomColor',
-              'borderLeftColor',
-              'outlineColor',
-              'textDecorationColor',
-              'columnRuleColor',
+              "backgroundColor",
+              "color",
+              "borderColor",
+              "borderTopColor",
+              "borderRightColor",
+              "borderBottomColor",
+              "borderLeftColor",
+              "outlineColor",
+              "textDecorationColor",
+              "columnRuleColor",
             ];
 
             // 段落和排版相关属性（解决 html2canvas 截图段落间距缺失问题）
             const spacingProperties = [
-              'margin',
-              'marginTop',
-              'marginBottom',
-              'padding',
-              'paddingTop',
-              'paddingBottom',
-              'lineHeight',
-              'fontSize',
-              'fontFamily',
-              'fontWeight',
-              'fontStyle',
+              "margin",
+              "marginTop",
+              "marginBottom",
+              "padding",
+              "paddingTop",
+              "paddingBottom",
+              "lineHeight",
+              "fontSize",
+              "fontFamily",
+              "fontWeight",
+              "fontStyle",
             ];
-            
+
             colorProperties.forEach((prop) => {
               try {
                 const value = computedStyle.getPropertyValue(prop);
-                if (value && (value.includes('oklch') || value.includes('color('))) {
+                if (
+                  value &&
+                  (value.includes("oklch") || value.includes("color("))
+                ) {
                   // 创建临时元素来获取转换后的颜色
                   const tempDiv = document.createElement("div");
                   tempDiv.style.setProperty(prop, value);
@@ -708,15 +723,25 @@ Hooks 让函数组件变得更加强大和灵活，是现代 React 开发的标�
                   tempDiv.style.visibility = "hidden";
                   tempDiv.style.top = "-9999px";
                   document.body.appendChild(tempDiv);
-                  const rgbValue = window.getComputedStyle(tempDiv).getPropertyValue(prop);
-                  if (rgbValue && rgbValue !== 'rgba(0, 0, 0, 0)' && rgbValue !== 'none') {
+                  const rgbValue = window
+                    .getComputedStyle(tempDiv)
+                    .getPropertyValue(prop);
+                  if (
+                    rgbValue &&
+                    rgbValue !== "rgba(0, 0, 0, 0)" &&
+                    rgbValue !== "none"
+                  ) {
                     htmlElement.style.setProperty(prop, rgbValue);
                   }
                   // 安全地移除元素
                   if (tempDiv.parentNode) {
                     tempDiv.parentNode.removeChild(tempDiv);
                   }
-                } else if (value && value !== 'rgba(0, 0, 0, 0)' && value !== 'transparent') {
+                } else if (
+                  value &&
+                  value !== "rgba(0, 0, 0, 0)" &&
+                  value !== "transparent"
+                ) {
                   // 对于非 oklch 的颜色值，直接应用
                   htmlElement.style.setProperty(prop, value);
                 }
@@ -742,7 +767,9 @@ Hooks 让函数组件变得更加强大和灵活，是现代 React 开发的标�
         });
 
         // 第三步：将视频替换为首帧图片，避免 html2canvas 捕获空白
-        const clonedVideos = clonedDoc.querySelectorAll("video[data-video-snapshot-id]");
+        const clonedVideos = clonedDoc.querySelectorAll(
+          "video[data-video-snapshot-id]"
+        );
         clonedVideos.forEach((clonedVideo) => {
           const id = clonedVideo.getAttribute("data-video-snapshot-id");
           if (!id) return;
@@ -778,7 +805,10 @@ Hooks 让函数组件变得更加强大和灵活，是现代 React 开发的标�
   /**
    * 安全加载图片，避免空 src 导致卡住
    */
-  const loadImage = (src: string, timeoutMs = 8000): Promise<HTMLImageElement> =>
+  const loadImage = (
+    src: string,
+    timeoutMs = 8000
+  ): Promise<HTMLImageElement> =>
     new Promise((resolve, reject) => {
       if (!src) {
         reject(new Error("图片地址为空"));
@@ -926,7 +956,9 @@ Hooks 让函数组件变得更加强大和灵活，是现代 React 开发的标�
       alert("图片融合成功！已开始下载");
     } catch (error) {
       console.error("融合图片失败:", error);
-      alert(`融合图片失败: ${error instanceof Error ? error.message : "未知错误"}`);
+      alert(
+        `融合图片失败: ${error instanceof Error ? error.message : "未知错误"}`
+      );
     } finally {
       setIsMerging(false);
     }
@@ -950,7 +982,9 @@ Hooks 让函数组件变得更加强大和灵活，是现代 React 开发的标�
       }
     } catch (error) {
       console.error("保存画布失败:", error);
-      alert(`保存画布失败: ${error instanceof Error ? error.message : "未知错误"}`);
+      alert(
+        `保存画布失败: ${error instanceof Error ? error.message : "未知错误"}`
+      );
     }
   };
 
@@ -992,10 +1026,10 @@ Hooks 让函数组件变得更加强大和灵活，是现代 React 开发的标�
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="container mx-auto space-y-6 p-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold mb-2">Canvas 批注演示</h1>
+          <h1 className="mb-2 text-3xl font-bold">Canvas 批注演示</h1>
           <p className="text-muted-foreground">
             Markdown 文章展示 + Fabric.js 画布批注 + 图片融合功能
           </p>
@@ -1003,11 +1037,13 @@ Hooks 让函数组件变得更加强大和灵活，是现代 React 开发的标�
       </div>
 
       {/* 悬浮操作面板：桌面端固定，移动端依旧随文档流排布 */}
-      <div
-        className="z-30 sticky top-4 lg:top-24 self-end flex flex-col gap-2 p-3 bg-white/90 dark:bg-slate-900/90 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg w-full max-w-xl"
-      >
+      <div className="sticky top-4 z-30 flex w-full max-w-xl flex-col gap-2 self-end rounded-lg border border-gray-200 bg-white/90 p-3 shadow-lg dark:border-gray-700 dark:bg-slate-900/90 lg:top-24">
         <div className="flex flex-wrap gap-2">
-          <Button onClick={handleCaptureArticle} variant="outline" title="截图文章">
+          <Button
+            onClick={handleCaptureArticle}
+            variant="outline"
+            title="截图文章"
+          >
             截图文章
           </Button>
           <Button onClick={handleSaveCanvas} variant="outline" title="保存批注">
@@ -1022,7 +1058,9 @@ Hooks 让函数组件变得更加强大和灵活，是现代 React 开发的标�
             title={isAnnotating ? "退出批注以操作视频控件" : "进入批注模式"}
           >
             <span aria-hidden>{isAnnotating ? "✋" : "✏️"}</span>
-            <span className="sr-only">{isAnnotating ? "退出批注" : "进入批注"}</span>
+            <span className="sr-only">
+              {isAnnotating ? "退出批注" : "进入批注"}
+            </span>
           </Button>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -1067,8 +1105,8 @@ Hooks 让函数组件变得更加强大和灵活，是现代 React 开发的标�
       {/* 文章容器 + 画布蒙层 */}
       <div className="space-y-4">
         {isAnnotating ? (
-          <div className="fixed inset-x-0 bottom-4 z-40 flex justify-center pointer-events-none">
-            <div className="pointer-events-auto bg-white/90 dark:bg-slate-900/90 border border-gray-200 dark:border-gray-700 shadow-lg rounded-lg px-3 py-2 flex flex-wrap items-center gap-2">
+          <div className="pointer-events-none fixed inset-x-0 bottom-4 z-40 flex justify-center">
+            <div className="pointer-events-auto flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 bg-white/90 px-3 py-2 shadow-lg dark:border-gray-700 dark:bg-slate-900/90">
               <CanvasAnnotation
                 canvasRef={canvasRef}
                 articleRef={articleRef}
@@ -1094,7 +1132,7 @@ Hooks 让函数组件变得更加强大和灵活，是现代 React 开发的标�
           {/* 文章内容 */}
           <div
             ref={articleRef}
-            className="bg-white p-6 rounded-lg shadow-md border relative"
+            className="relative rounded-lg border bg-white p-6 shadow-md"
           >
             {memoizedArticle}
           </div>
@@ -1120,11 +1158,11 @@ Hooks 让函数组件变得更加强大和灵活，是现代 React 开发的标�
         </div>
       </div>
 
-      <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-        <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
+      <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-950">
+        <h3 className="mb-2 font-semibold text-blue-900 dark:text-blue-100">
           使用说明：
         </h3>
-        <ul className="list-disc list-inside space-y-1 text-sm text-blue-800 dark:text-blue-200">
+        <ul className="list-inside list-disc space-y-1 text-sm text-blue-800 dark:text-blue-200">
           <li>直接在文章上使用画笔工具进行标记或批注（画布覆盖在文章上方）</li>
           <li>点击“保存批注”可以单独保存画布批注（透明背景）</li>
           <li>点击“截图文章”可以单独保存文章页面截图</li>
@@ -1134,4 +1172,3 @@ Hooks 让函数组件变得更加强大和灵活，是现代 React 开发的标�
     </div>
   );
 }
-

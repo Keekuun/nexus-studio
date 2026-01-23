@@ -2,7 +2,13 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 /**
  * 案例演示页面
@@ -21,9 +27,19 @@ export default function DemosPage(): JSX.Element {
     {
       id: "feishu-doc",
       title: "类飞书文档交互",
-      description: "Tiptap + React 实现的文档交互，支持嵌套 Block 高亮、边缘检测、评论锚定等功能",
+      description:
+        "Tiptap + React 实现的文档交互，支持嵌套 Block 高亮、边缘检测、评论锚定等功能",
       href: "/demos/feishu-doc",
       tags: ["Tiptap", "ProseMirror", "Block Selection", "Comments"],
+      status: "已完成",
+    },
+    {
+      id: "slate-doc",
+      title: "Slate.js 文档交互",
+      description:
+        "Slate.js + React 实现的文档交互，支持评论双向铆定、SSE 流式加载模拟、自定义 Block 等功能",
+      href: "/demos/slate-doc",
+      tags: ["Slate.js", "React", "Comments", "SSE"],
       status: "已完成",
     },
     // 后续可以在这里添加更多案例
@@ -38,7 +54,7 @@ export default function DemosPage(): JSX.Element {
   ];
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="container mx-auto space-y-6 p-6">
       <div className="space-y-2">
         <h1 className="text-3xl font-bold">案例演示</h1>
         <p className="text-muted-foreground">
@@ -53,7 +69,7 @@ export default function DemosPage(): JSX.Element {
               <div className="flex items-center justify-between">
                 <CardTitle>{demo.title}</CardTitle>
                 <span
-                  className={`text-xs px-2 py-1 rounded ${
+                  className={`rounded px-2 py-1 text-xs ${
                     demo.status === "已完成"
                       ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
                       : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
@@ -64,12 +80,12 @@ export default function DemosPage(): JSX.Element {
               </div>
               <CardDescription>{demo.description}</CardDescription>
             </CardHeader>
-            <CardContent className="flex-1 flex flex-col justify-between">
-              <div className="flex flex-wrap gap-2 mb-4">
+            <CardContent className="flex flex-1 flex-col justify-between">
+              <div className="mb-4 flex flex-wrap gap-2">
                 {demo.tags.map((tag) => (
                   <span
                     key={tag}
-                    className="text-xs px-2 py-1 bg-secondary text-secondary-foreground rounded"
+                    className="rounded bg-secondary px-2 py-1 text-xs text-secondary-foreground"
                   >
                     {tag}
                   </span>
@@ -84,11 +100,10 @@ export default function DemosPage(): JSX.Element {
       </div>
 
       {demos.length === 0 && (
-        <div className="text-center py-12 text-muted-foreground">
+        <div className="py-12 text-center text-muted-foreground">
           <p>暂无案例演示</p>
         </div>
       )}
     </div>
   );
 }
-
