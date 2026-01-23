@@ -5,7 +5,12 @@ const nextConfig: NextConfig = {
   // 性能优化配置
   images: {
     formats: ["image/avif", "image/webp"],
-    remotePatterns: [],
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com",
+      },
+    ],
   },
   // 压缩配置
   compress: true,
@@ -41,4 +46,3 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
-

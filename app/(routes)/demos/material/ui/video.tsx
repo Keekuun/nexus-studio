@@ -58,13 +58,13 @@ export function Video({
   const containerStyle: React.CSSProperties = {
     width: width,
     height: height,
-    aspectRatio: aspectRatio,
+    aspectRatio: aspectRatio?.toString().replace(":", "/"),
   };
 
   return (
     <div
       className={cn(
-        "group relative cursor-pointer overflow-hidden bg-muted",
+        "group relative w-full cursor-pointer overflow-hidden bg-muted",
         borderRadiusStyles[borderRadius],
         className
       )}
