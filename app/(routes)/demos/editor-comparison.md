@@ -151,3 +151,5 @@
 ### 总结
 
 如果你的首要目标是**UI/UX 的极致定制**，而不是复用现成的文档编辑功能（如标准的 Markdown 解析、复杂的表格操作等），Slate 是更合适的选择。它提供了一块“空白画布”，让你用 React 的方式去绘制文档。
+
+〉https://npmtrends.com/draft-js-vs-grapesjs-vs-slate-vs-tiptap
