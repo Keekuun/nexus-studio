@@ -15,7 +15,6 @@ export const Video = (props: RenderElementProps) => {
         contentEditable={false}
         className="group relative flex aspect-video items-center justify-center overflow-hidden rounded-lg bg-slate-900"
       >
-        {}
         <video src={node.src} className="h-full w-full object-cover" />
         <div className="absolute inset-0 flex items-center justify-center bg-black/20 transition-colors group-hover:bg-black/40">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/20 backdrop-blur">
