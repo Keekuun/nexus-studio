@@ -74,110 +74,92 @@ export interface AssetGroup {
   assets: Asset[];
 }
 
-// ===================== 模块专属类型（基于通用类型扩展） =====================
+// ===================== 灵活数据结构（推荐使用） =====================
+/**
+ * 文档类型枚举
+ */
+export type DocumentType =
+  | "brief"
+  | "creative-planning"
+  | "visual-asset"
+  | "storyboard";
+
+/**
+ * 键值对数据项（用于区块内容）
+ */
+export interface KeyValuePair {
+  /** 字段键名 */
+  key: string;
+  /** 字段值（支持多种类型） */
+  value: string | number | boolean | string[] | number[] | null | undefined;
+}
+
+/**
+ * 文档区块（block）
+ */
+export interface DocumentBlock {
+  /** 区块标识（如 "videoConfig", "contentRequirement"） */
+  block: string;
+  /** 区块数据（键值对数组） */
+  data: KeyValuePair[];
+}
+
+/**
+ * 灵活文档结构（推荐使用）
+ *
+ * 设计说明：
+ * - 使用扁平化的 key-value 结构，便于扩展
+ * - 区块（block）可以动态增减
+ * - 每个区块内的字段（key-value）可以动态增减
+ * - 完全支持评论绑定和序列化
+ */
+export interface FlexibleDocument extends BaseEntity {
+  /** 文档类型 */
+  type: DocumentType;
+  /** 文档区块列表 */
+  docs: DocumentBlock[];
+}
+
+// ===================== 模块类型定义（统一使用 FlexibleDocument 格式） =====================
 /**
  * 1. Brief 模块
+ * 使用 type: "brief" 和 docs 数组结构
  */
-// 视频配置
-export interface VideoConfig {
-  /** 视频时长（如 "15s"） */
-  duration: string;
-  /** 视频宽高比（如 "16:9"） */
-  aspectRatio: string;
-  /** 视频分辨率（如 "1080p"） */
-  resolution: string;
-}
-
-// 内容需求
-export interface ContentRequirement {
-  /** 产品名称 */
-  productName: string;
-  /** 产品链接 */
-  productLink: string;
-  /** 主要投放平台列表 */
-  primaryPlatforms: string[];
-  /** 核心卖点 */
-  coreSellingPoints: string;
-}
-
-// Brief 主结构（继承基础实体）
-export interface Brief extends BaseEntity {
-  /** 视频配置 */
-  videoConfig: VideoConfig;
-  /** 内容需求 */
-  contentRequirement: ContentRequirement;
-  /** 参考资产列表（仅支持图片/视频） */
-  referenceAssets: (Omit<Asset, "duration" | "fileSize"> & {
-    type: AssetType.IMAGE | AssetType.VIDEO;
-  })[];
-}
+export type Brief = FlexibleDocument & {
+  type: "brief";
+};
 
 /**
- * 2. 视觉资产模块
+ * 2. CreativePlanning 模块
+ * 使用 type: "creative-planning" 和 docs 数组结构
  */
-export interface VisualAsset extends BaseEntity {
-  /** 创意概念 */
-  creativeConcept: string;
-  /** 核心创意描述 */
-  coreCreative: string;
-  /** 资产分组列表 */
-  assetGroups: AssetGroup[];
-}
+export type CreativePlanning = FlexibleDocument & {
+  type: "creative-planning";
+};
 
 /**
- * 3. 分镜脚本模块
+ * 3. VisualAsset 模块
+ * 使用 type: "visual-asset" 和 docs 数组结构
  */
-// 单条分镜
-export interface StoryboardShot {
-  /** 分镜ID */
-  id: Id;
-  /** 镜头序号 */
-  sequence: number;
-  /** 分镜缩略图URL */
-  thumbnailUrl: ResourceUrl;
-  /** 镜头时长（如 "10s"） */
-  duration: string;
-  /** 镜头说明 */
-  notes: string;
-  /** 关联资产ID（可选） */
-  relatedAssetId?: Id;
-}
-
-// 分镜脚本主结构（继承基础实体）
-export interface Storyboard extends BaseEntity {
-  /** 分镜列表 */
-  shots: StoryboardShot[];
-}
+export type VisualAsset = FlexibleDocument & {
+  type: "visual-asset";
+};
 
 /**
- * 4. 创意策划模块
+ * 4. Storyboard 模块
+ * 使用 type: "storyboard" 和 docs 数组结构
  */
-// 单个创意概念
-export interface CreativeConcept {
-  /** 概念ID */
-  id: Id;
-  /** 概念标题 */
-  title: string;
-  /** 概念标签 */
-  tags: string[];
-  /** 核心创意描述 */
-  coreCreative: string;
-  /** 创意大纲 */
-  outline: string[];
-  /** 关联资产列表 */
-  assets: Asset[];
-}
-
-// 创意策划主结构（继承基础实体）
-export interface CreativePlanning extends BaseEntity {
-  /** 创意概念列表 */
-  concepts: CreativeConcept[];
-}
+export type Storyboard = FlexibleDocument & {
+  type: "storyboard";
+};
 
 // ===================== 全局联合类型 =====================
-/** 所有创意内容模块的联合类型 */
+/** 所有创意内容模块的联合类型（统一为 FlexibleDocument 格式） */
 export type CreativeContent =
   | Brief
+  | CreativePlanning
   | VisualAsset
-  | Storyboard
-  | CreativePlanning;
+  | Storyboard;
+
+/** 所有文档类型的联合类型（统一为 FlexibleDocument） */
+export type AnyDocument = FlexibleDocument;
