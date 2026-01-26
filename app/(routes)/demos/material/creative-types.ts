@@ -82,7 +82,8 @@ export type DocumentType =
   | "brief"
   | "creative-planning"
   | "visual-asset"
-  | "storyboard";
+  | "storyboard"
+  | "final-video";
 
 /**
  * 键值对数据项（用于区块内容）
@@ -153,13 +154,22 @@ export type Storyboard = FlexibleDocument & {
   type: "storyboard";
 };
 
+/**
+ * 5. FinalVideo 模块
+ * 使用 type: "final-video" 和 docs 数组结构
+ */
+export type FinalVideo = FlexibleDocument & {
+  type: "final-video";
+};
+
 // ===================== 全局联合类型 =====================
 /** 所有创意内容模块的联合类型（统一为 FlexibleDocument 格式） */
 export type CreativeContent =
   | Brief
   | CreativePlanning
   | VisualAsset
-  | Storyboard;
+  | Storyboard
+  | FinalVideo;
 
 /** 所有文档类型的联合类型（统一为 FlexibleDocument） */
 export type AnyDocument = FlexibleDocument;

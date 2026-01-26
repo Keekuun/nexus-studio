@@ -89,7 +89,8 @@ export type DocumentType =
   | "brief"
   | "creative-planning"
   | "visual-asset"
-  | "storyboard";
+  | "storyboard"
+  | "final-video";
 
 /**
  * 键值对数据项（用于区块内容）
@@ -187,13 +188,22 @@ export type Storyboard = FlexibleDocument & {
   type: "storyboard";
 };
 
+/**
+ * 5. FinalVideo 模块
+ * 使用 type: "final-video" 和 docs 数组结构
+ */
+export type FinalVideo = FlexibleDocument & {
+  type: "final-video";
+};
+
 // ===================== 全局联合类型 =====================
 /** 所有创意内容模块的联合类型（统一为 FlexibleDocument 格式） */
 export type CreativeContent =
   | Brief
   | CreativePlanning
   | VisualAsset
-  | Storyboard;
+  | Storyboard
+  | FinalVideo;
 
 /** 所有文档类型的联合类型（统一为 FlexibleDocument） */
 export type AnyDocument = FlexibleDocument;
@@ -404,9 +414,40 @@ export type AnyDocument = FlexibleDocument;
 }
 ```
 
+### 5. FinalVideo 模块
+
+```json
+{
+  "type": "final-video",
+  "id": "final-video-001",
+  "title": "Final Video Deliverable",
+  "createdAt": "2025-02-15T14:05:00Z",
+  "docs": [
+    {
+      "block": "video",
+      "data": [
+        {
+          "key": "video",
+          "value": {
+            "id": "video-001",
+            "assetId": "asset-video-001",
+            "title": "Final Production Video",
+            "url": "https://example.com/assets/final-video.mp4",
+            "thumbnailUrl": "https://example.com/assets/final-video-thumb.jpg",
+            "type": "video",
+            "duration": "15s",
+            "description": "最终交付视频"
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
 ### 核心特点
 
-1. **统一数据结构**：所有模块（Brief、CreativePlanning、VisualAsset、Storyboard）统一使用 `FlexibleDocument` 格式
+1. **统一数据结构**：所有模块（Brief、CreativePlanning、VisualAsset、Storyboard、FinalVideo）统一使用 `FlexibleDocument` 格式
 2. **完全动态扩展**：区块（block）和字段（key-value）都可以动态增减，无需修改类型定义
 3. **语义化清晰**：所有字段用完整英文单词（如 `createdAt`），无缩写，可读性强
 4. **模块字段统一**：所有模块的基础字段（`id`/`title`/`createdAt`）完全一致，降低对接和维护成本
