@@ -1,6 +1,6 @@
 import React from "react";
 import { cn } from "@/lib/utils";
-import { Asset, AssetType } from "../creative-types";
+import { Asset, AssetType, Id } from "../creative-types";
 import { Image } from "./image";
 import { Video } from "./video";
 import { Typography } from "./typography";
@@ -8,22 +8,38 @@ import { Typography } from "./typography";
 export interface AssetCardProps {
   /** 完整资产数据对象 */
   asset: Asset;
+  /** 资产唯一ID（用于评论绑定） */
+  assetBlockId?: Id;
   /** 是否显示标题和描述 */
   showDetails?: boolean;
+  /** 评论数量（可选） */
+  commentCount?: number;
   /** 点击卡片的回调 */
   onAssetClick?: (assetId: string) => void;
+  /** 评论点击回调 */
+  onCommentClick?: (blockId: Id) => void;
   /** 额外的 CSS 类名 */
   className?: string;
 }
 
 export function AssetCard({
   asset,
+  assetBlockId,
   showDetails = false,
+  commentCount = 0,
   onAssetClick,
+  onCommentClick,
   className,
 }: AssetCardProps) {
   const handleAssetClick = () => {
     onAssetClick?.(asset.id);
+  };
+
+  const handleCommentClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (assetBlockId) {
+      onCommentClick?.(assetBlockId);
+    }
   };
 
   const renderMedia = () => {
@@ -54,8 +70,25 @@ export function AssetCard({
   };
 
   return (
-    <div className={cn("flex flex-col gap-2", className)}>
-      {renderMedia()}
+    <div
+      data-block-id={assetBlockId}
+      data-id={assetBlockId}
+      className={cn("group relative flex flex-col gap-2", className)}
+    >
+      <div className="relative">
+        {renderMedia()}
+
+        {/* 评论角标 */}
+        {commentCount > 0 && assetBlockId && (
+          <button
+            onClick={handleCommentClick}
+            className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground transition-transform hover:scale-110"
+            title={`${commentCount} 条评论`}
+          >
+            {commentCount}
+          </button>
+        )}
+      </div>
 
       {showDetails && (
         <div className="flex flex-col gap-1">
