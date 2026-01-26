@@ -96,16 +96,29 @@ export type DocumentType =
  * 键值对数据项（用于区块内容）
  */
 export interface KeyValuePair {
+  /** 唯一标识（全局唯一） */
+  id: Id;
   /** 字段键名 */
   key: string;
-  /** 字段值（支持多种类型） */
-  value: string | number | boolean | string[] | number[] | null | undefined;
+  /** 字段值（支持多种类型，包括对象和数组） */
+  value:
+    | string
+    | number
+    | boolean
+    | string[]
+    | number[]
+    | Record<string, unknown>
+    | unknown[]
+    | null
+    | undefined;
 }
 
 /**
  * 文档区块（block）
  */
 export interface DocumentBlock {
+  /** 唯一标识（全局唯一） */
+  id: Id;
   /** 区块标识（如 "videoConfig", "contentRequirement"） */
   block: string;
   /** 区块数据（键值对数组） */
@@ -130,18 +143,20 @@ export interface DocumentBlock {
  *   createdAt: "2025-01-26T10:00:00Z",
  *   docs: [
  *     {
+ *       id: "block-videoConfig-001",
  *       block: "videoConfig",
  *       data: [
- *         { key: "duration", value: "15s" },
- *         { key: "aspectRatio", value: "16:9" },
- *         { key: "resolution", value: "1080p" }
+ *         { id: "kv-duration-001", key: "duration", value: "15s" },
+ *         { id: "kv-aspectRatio-001", key: "aspectRatio", value: "16:9" },
+ *         { id: "kv-resolution-001", key: "resolution", value: "1080p" }
  *       ]
  *     },
  *     {
+ *       id: "block-contentRequirement-001",
  *       block: "contentRequirement",
  *       data: [
- *         { key: "productName", value: "Product Name" },
- *         { key: "productLink", value: "https://example.com" }
+ *         { id: "kv-productName-001", key: "productName", value: "Product Name" },
+ *         { id: "kv-productLink-001", key: "productLink", value: "https://example.com" }
  *       ]
  *     }
  *   ]
@@ -223,39 +238,54 @@ export type AnyDocument = FlexibleDocument;
   "createdAt": "2025-02-15T14:05:00Z",
   "docs": [
     {
+      "id": "block-videoConfig-001",
       "block": "videoConfig",
       "data": [
-        { "key": "duration", "value": "15s" },
-        { "key": "aspectRatio", "value": "16:9" },
-        { "key": "resolution", "value": "1080p" },
-        { "key": "frameRate", "value": "30fps" },
-        { "key": "codec", "value": "H.264" }
+        { "id": "kv-duration-001", "key": "duration", "value": "15s" },
+        { "id": "kv-aspectRatio-001", "key": "aspectRatio", "value": "16:9" },
+        { "id": "kv-resolution-001", "key": "resolution", "value": "1080p" },
+        { "id": "kv-frameRate-001", "key": "frameRate", "value": "30fps" },
+        { "id": "kv-codec-001", "key": "codec", "value": "H.264" }
       ]
     },
     {
+      "id": "block-contentRequirement-001",
       "block": "contentRequirement",
       "data": [
         {
+          "id": "kv-productName-001",
           "key": "productName",
           "value": "Thank you for providing all the details"
         },
         {
+          "id": "kv-productLink-001",
           "key": "productLink",
           "value": "blackhead.com/product/3082908blackhead.com/produc"
         },
-        { "key": "primaryPlatforms", "value": ["TikTok", "Youtube"] },
         {
+          "id": "kv-primaryPlatforms-001",
+          "key": "primaryPlatforms",
+          "value": ["TikTok", "Youtube"]
+        },
+        {
+          "id": "kv-coreSellingPoints-001",
           "key": "coreSellingPoints",
           "value": "Thank you for providing all the details! I have summarized everything we've discussed for your review. Please confirm that all the information is accurate."
         },
-        { "key": "targetAudience", "value": "18-35" },
-        { "key": "budget", "value": 10000 }
+        {
+          "id": "kv-targetAudience-001",
+          "key": "targetAudience",
+          "value": "18-35"
+        },
+        { "id": "kv-budget-001", "key": "budget", "value": 10000 }
       ]
     },
     {
+      "id": "block-referenceAssets-001",
       "block": "referenceAssets",
       "data": [
         {
+          "id": "kv-assets-001",
           "key": "assets",
           "value": [
             {
@@ -293,9 +323,11 @@ export type AnyDocument = FlexibleDocument;
   "createdAt": "2025-02-15T14:05:00Z",
   "docs": [
     {
+      "id": "block-concepts-001",
       "block": "concepts",
       "data": [
         {
+          "id": "kv-concepts-001",
           "key": "concepts",
           "value": [
             {
@@ -334,22 +366,33 @@ export type AnyDocument = FlexibleDocument;
   "createdAt": "2025-02-15T14:05:00Z",
   "docs": [
     {
+      "id": "block-creativeConcept-001",
       "block": "creativeConcept",
-      "data": [{ "key": "concept", "value": "The Morning Miracle" }]
+      "data": [
+        {
+          "id": "kv-concept-001",
+          "key": "concept",
+          "value": "The Morning Miracle"
+        }
+      ]
     },
     {
+      "id": "block-coreCreative-001",
       "block": "coreCreative",
       "data": [
         {
+          "id": "kv-description-001",
           "key": "description",
           "value": "An organic construction of silver filaments in a white void that solidifies into body architecture on a cold, confident model."
         }
       ]
     },
     {
+      "id": "block-assetGroups-001",
       "block": "assetGroups",
       "data": [
         {
+          "id": "kv-groups-001",
           "key": "groups",
           "value": [
             {
@@ -385,9 +428,11 @@ export type AnyDocument = FlexibleDocument;
   "createdAt": "2025-02-15T14:05:00Z",
   "docs": [
     {
+      "id": "block-shots-001",
       "block": "shots",
       "data": [
         {
+          "id": "kv-shots-001",
           "key": "shots",
           "value": [
             {
@@ -424,9 +469,11 @@ export type AnyDocument = FlexibleDocument;
   "createdAt": "2025-02-15T14:05:00Z",
   "docs": [
     {
+      "id": "block-video-001",
       "block": "video",
       "data": [
         {
+          "id": "kv-video-001",
           "key": "video",
           "value": {
             "id": "video-001",
@@ -449,14 +496,26 @@ export type AnyDocument = FlexibleDocument;
 
 1. **统一数据结构**：所有模块（Brief、CreativePlanning、VisualAsset、Storyboard、FinalVideo）统一使用 `FlexibleDocument` 格式
 2. **完全动态扩展**：区块（block）和字段（key-value）都可以动态增减，无需修改类型定义
-3. **语义化清晰**：所有字段用完整英文单词（如 `createdAt`），无缩写，可读性强
-4. **模块字段统一**：所有模块的基础字段（`id`/`title`/`createdAt`）完全一致，降低对接和维护成本
-5. **支持评论绑定**：通过 BlockId 实现评论与节点的双向绑定
-6. **易于序列化**：扁平化的 key-value 结构，便于前端序列化和后端存储
+3. **唯一ID标识**：每个层级（Document、DocumentBlock、KeyValuePair）都有唯一ID，便于追踪和引用
+4. **语义化清晰**：所有字段用完整英文单词（如 `createdAt`），无缩写，可读性强
+5. **模块字段统一**：所有模块的基础字段（`id`/`title`/`createdAt`）完全一致，降低对接和维护成本
+6. **支持评论绑定**：通过 BlockId 或 ID 实现评论与节点的双向绑定
+7. **易于序列化**：扁平化的 key-value 结构，便于前端序列化和后端存储
 
 ### 灵活结构处理工具函数
 
 ```typescript
+/**
+ * 生成唯一ID（使用 nanoid 或类似库）
+ * 实际使用时需要引入 nanoid: import { nanoid } from 'nanoid'
+ */
+export function generateId(prefix?: string): Id {
+  // 实际实现应使用 nanoid() 或类似库
+  // 这里仅作示例，实际使用时需要引入 nanoid
+  const randomId = Math.random().toString(36).substring(2, 15);
+  return prefix ? `${prefix}-${randomId}` : randomId;
+}
+
 /**
  * 从灵活结构中获取指定区块
  */
@@ -465,6 +524,16 @@ export function getBlock(
   blockName: string
 ): DocumentBlock | undefined {
   return doc.docs.find((d) => d.block === blockName);
+}
+
+/**
+ * 通过ID获取区块
+ */
+export function getBlockById(
+  doc: FlexibleDocument,
+  blockId: Id
+): DocumentBlock | undefined {
+  return doc.docs.find((d) => d.id === blockId);
 }
 
 /**
@@ -479,20 +548,35 @@ export function getBlockValue(
 }
 
 /**
- * 设置区块中的键值对
+ * 通过ID获取键值对
+ */
+export function getKeyValuePairById(
+  block: DocumentBlock,
+  kvId: Id
+): KeyValuePair | undefined {
+  return block.data.find((d) => d.id === kvId);
+}
+
+/**
+ * 设置区块中的键值对（自动生成ID）
  */
 export function setBlockValue(
   block: DocumentBlock,
   key: string,
-  value: KeyValuePair["value"]
+  value: KeyValuePair["value"],
+  id?: Id
 ): DocumentBlock {
   const existingIndex = block.data.findIndex((d) => d.key === key);
-  const newItem: KeyValuePair = { key, value };
+  const newItem: KeyValuePair = {
+    id: id || generateId(`kv-${key}`),
+    key,
+    value,
+  };
 
   if (existingIndex >= 0) {
-    // 更新现有项
+    // 更新现有项（保留原有ID）
     const newData = [...block.data];
-    newData[existingIndex] = newItem;
+    newData[existingIndex] = { ...newItem, id: block.data[existingIndex].id };
     return { ...block, data: newData };
   } else {
     // 添加新项
@@ -514,15 +598,38 @@ export function removeBlockValue(
 }
 
 /**
- * 添加新区块
+ * 通过ID移除键值对
+ */
+export function removeBlockValueById(
+  block: DocumentBlock,
+  kvId: Id
+): DocumentBlock {
+  return {
+    ...block,
+    data: block.data.filter((d) => d.id !== kvId),
+  };
+}
+
+/**
+ * 添加新区块（自动生成ID）
  */
 export function addBlock(
   doc: FlexibleDocument,
-  block: DocumentBlock
+  block: Omit<DocumentBlock, "id">,
+  id?: Id
 ): FlexibleDocument {
+  const newBlock: DocumentBlock = {
+    ...block,
+    id: id || generateId(`block-${block.block}`),
+    // 确保 data 中的每个 KeyValuePair 都有 id
+    data: block.data.map((kv) => ({
+      ...kv,
+      id: kv.id || generateId(`kv-${kv.key}`),
+    })),
+  };
   return {
     ...doc,
-    docs: [...doc.docs, block],
+    docs: [...doc.docs, newBlock],
   };
 }
 
@@ -536,6 +643,19 @@ export function removeBlock(
   return {
     ...doc,
     docs: doc.docs.filter((d) => d.block !== blockName),
+  };
+}
+
+/**
+ * 通过ID移除区块
+ */
+export function removeBlockById(
+  doc: FlexibleDocument,
+  blockId: Id
+): FlexibleDocument {
+  return {
+    ...doc,
+    docs: doc.docs.filter((d) => d.id !== blockId),
   };
 }
 ```

@@ -89,16 +89,29 @@ export type DocumentType =
  * 键值对数据项（用于区块内容）
  */
 export interface KeyValuePair {
+  /** 唯一标识（全局唯一） */
+  id: Id;
   /** 字段键名 */
   key: string;
-  /** 字段值（支持多种类型） */
-  value: string | number | boolean | string[] | number[] | null | undefined;
+  /** 字段值（支持多种类型，包括对象和数组） */
+  value:
+    | string
+    | number
+    | boolean
+    | string[]
+    | number[]
+    | Record<string, unknown>
+    | unknown[]
+    | null
+    | undefined;
 }
 
 /**
  * 文档区块（block）
  */
 export interface DocumentBlock {
+  /** 唯一标识（全局唯一） */
+  id: Id;
   /** 区块标识（如 "videoConfig", "contentRequirement"） */
   block: string;
   /** 区块数据（键值对数组） */

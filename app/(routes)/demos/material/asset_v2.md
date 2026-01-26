@@ -2,12 +2,13 @@
 
 ## 设计目标
 
-1. **统一数据结构**：所有模块（Brief、VisualAsset、Storyboard、CreativePlanning）统一使用 `FlexibleDocument` 格式
-2. **DOM 节点绑定**：每个 JSON 节点对应一个 DOM 节点，通过 `data-block-id` 属性关联
-3. **评论双向绑定**：评论与 JSON 节点双向绑定，支持框选和评论功能
-4. **高效序列化**：前端可方便地序列化和反序列化，便于后端存储
-5. **层级路径标识**：使用层级路径作为 blockId，便于定位和查询
-6. **完全动态扩展**：区块（block）和字段（key-value）都可以动态增减，无需修改类型定义
+1. **统一数据结构**：所有模块（Brief、CreativePlanning、VisualAsset、Storyboard、FinalVideo）统一使用 `FlexibleDocument` 格式
+2. **唯一ID标识**：每个层级（Document、DocumentBlock、KeyValuePair）都有唯一ID，便于追踪和引用
+3. **DOM 节点绑定**：每个 JSON 节点对应一个 DOM 节点，通过 `data-block-id` 或 `data-id` 属性关联
+4. **评论双向绑定**：评论与 JSON 节点双向绑定，支持框选和评论功能
+5. **高效序列化**：前端可方便地序列化和反序列化，便于后端存储
+6. **层级路径标识**：使用层级路径或 ID 作为 blockId，便于定位和查询
+7. **完全动态扩展**：区块（block）和字段（key-value）都可以动态增减，无需修改类型定义
 
 ## 核心协议设计
 
@@ -327,36 +328,47 @@ export interface CreativeConceptV2 extends CreativeConcept, CommentableEntity {
   "createdAt": "2025-02-15T14:05:00Z",
   "docs": [
     {
+      "id": "block-videoConfig-001",
       "block": "videoConfig",
       "data": [
-        { "key": "duration", "value": "15s" },
-        { "key": "aspectRatio", "value": "16:9" },
-        { "key": "resolution", "value": "1080p" },
-        { "key": "frameRate", "value": "30fps" }
+        { "id": "kv-duration-001", "key": "duration", "value": "15s" },
+        { "id": "kv-aspectRatio-001", "key": "aspectRatio", "value": "16:9" },
+        { "id": "kv-resolution-001", "key": "resolution", "value": "1080p" },
+        { "id": "kv-frameRate-001", "key": "frameRate", "value": "30fps" }
       ]
     },
     {
+      "id": "block-contentRequirement-001",
       "block": "contentRequirement",
       "data": [
         {
+          "id": "kv-productName-001",
           "key": "productName",
           "value": "Thank you for providing all the details"
         },
         {
+          "id": "kv-productLink-001",
           "key": "productLink",
           "value": "blackhead.com/product/3082908blackhead.com/produc"
         },
-        { "key": "primaryPlatforms", "value": ["TikTok", "Youtube"] },
         {
+          "id": "kv-primaryPlatforms-001",
+          "key": "primaryPlatforms",
+          "value": ["TikTok", "Youtube"]
+        },
+        {
+          "id": "kv-coreSellingPoints-001",
           "key": "coreSellingPoints",
           "value": "Thank you for providing all the details! I have summarized everything we've discussed for your review. Please confirm that all the information is accurate."
         }
       ]
     },
     {
+      "id": "block-referenceAssets-001",
       "block": "referenceAssets",
       "data": [
         {
+          "id": "kv-assets-001",
           "key": "assets",
           "value": [
             {
@@ -375,13 +387,23 @@ export interface CreativeConceptV2 extends CreativeConcept, CommentableEntity {
 }
 ```
 
-**BlockId 示例**：
+**BlockId 示例**（支持两种方式）：
+
+**方式1：层级路径**
 
 - `brief` - 文档根节点
 - `brief.docs[0].block` - videoConfig 区块
 - `brief.docs[0].data[0].key` - duration 字段
 - `brief.docs[1].block` - contentRequirement 区块
 - `brief.docs[1].data[0].key` - productName 字段
+
+**方式2：唯一ID（推荐）**
+
+- `brief-001` - 文档根节点ID
+- `block-videoConfig-001` - videoConfig 区块ID
+- `kv-duration-001` - duration 键值对ID
+- `block-contentRequirement-001` - contentRequirement 区块ID
+- `kv-productName-001` - productName 键值对ID
 
 ### 2. CreativePlanning 模块
 
@@ -393,9 +415,11 @@ export interface CreativeConceptV2 extends CreativeConcept, CommentableEntity {
   "createdAt": "2025-02-15T14:05:00Z",
   "docs": [
     {
+      "id": "block-concepts-001",
       "block": "concepts",
       "data": [
         {
+          "id": "kv-concepts-001",
           "key": "concepts",
           "value": [
             {
@@ -424,11 +448,19 @@ export interface CreativeConceptV2 extends CreativeConcept, CommentableEntity {
 }
 ```
 
-**BlockId 示例**：
+**BlockId 示例**（支持两种方式）：
+
+**方式1：层级路径**
 
 - `creative-planning` - 文档根节点
 - `creative-planning.docs[0].block` - concepts 区块
 - `creative-planning.docs[0].data[0].key` - concepts 字段
+
+**方式2：唯一ID（推荐）**
+
+- `creative-planning-001` - 文档根节点ID
+- `block-concepts-001` - concepts 区块ID
+- `kv-concepts-001` - concepts 键值对ID
 
 ### 3. VisualAsset 模块
 
@@ -440,22 +472,33 @@ export interface CreativeConceptV2 extends CreativeConcept, CommentableEntity {
   "createdAt": "2025-02-15T14:05:00Z",
   "docs": [
     {
+      "id": "block-creativeConcept-001",
       "block": "creativeConcept",
-      "data": [{ "key": "concept", "value": "The Morning Miracle" }]
+      "data": [
+        {
+          "id": "kv-concept-001",
+          "key": "concept",
+          "value": "The Morning Miracle"
+        }
+      ]
     },
     {
+      "id": "block-coreCreative-001",
       "block": "coreCreative",
       "data": [
         {
+          "id": "kv-description-001",
           "key": "description",
           "value": "An organic construction of silver filaments in a white void that solidifies into body architecture on a cold, confident model."
         }
       ]
     },
     {
+      "id": "block-assetGroups-001",
       "block": "assetGroups",
       "data": [
         {
+          "id": "kv-groups-001",
           "key": "groups",
           "value": [
             {
@@ -481,11 +524,19 @@ export interface CreativeConceptV2 extends CreativeConcept, CommentableEntity {
 }
 ```
 
-**BlockId 示例**：
+**BlockId 示例**（支持两种方式）：
+
+**方式1：层级路径**
 
 - `visual-asset` - 文档根节点
 - `visual-asset.docs[0].block` - creativeConcept 区块
 - `visual-asset.docs[2].data[0].key` - groups 字段
+
+**方式2：唯一ID（推荐）**
+
+- `visual-asset-001` - 文档根节点ID
+- `block-creativeConcept-001` - creativeConcept 区块ID
+- `kv-groups-001` - groups 键值对ID
 
 ### 4. Storyboard 模块
 
@@ -497,9 +548,11 @@ export interface CreativeConceptV2 extends CreativeConcept, CommentableEntity {
   "createdAt": "2025-02-15T14:05:00Z",
   "docs": [
     {
+      "id": "block-shots-001",
       "block": "shots",
       "data": [
         {
+          "id": "kv-shots-001",
           "key": "shots",
           "value": [
             {
@@ -526,17 +579,75 @@ export interface CreativeConceptV2 extends CreativeConcept, CommentableEntity {
 }
 ```
 
-**BlockId 示例**：
+**BlockId 示例**（支持两种方式）：
+
+**方式1：层级路径**
 
 - `storyboard` - 文档根节点
 - `storyboard.docs[0].block` - shots 区块
 - `storyboard.docs[0].data[0].key` - shots 字段
 
+**方式2：唯一ID（推荐）**
+
+- `storyboard-001` - 文档根节点ID
+- `block-shots-001` - shots 区块ID
+- `kv-shots-001` - shots 键值对ID
+
 **关键点**：
 
 - 所有模块统一使用 `type` + `docs` 数组结构
-- BlockId 通过 `{type}.docs[{blockIndex}].block` 和 `{type}.docs[{blockIndex}].data[{dataIndex}].key` 格式生成
+- 每个层级（Document、DocumentBlock、KeyValuePair）都有唯一ID
+- BlockId 支持两种方式：
+  - 层级路径：`{type}.docs[{blockIndex}].block` 和 `{type}.docs[{blockIndex}].data[{dataIndex}].key`
+  - 唯一ID：直接使用各层级的 `id`（推荐，更简洁高效）
 - 区块和字段都可以动态增减，无需修改类型定义
+
+### 5. FinalVideo 模块
+
+```json
+{
+  "type": "final-video",
+  "id": "final-video-001",
+  "title": "Final Video Deliverable",
+  "createdAt": "2025-02-15T14:05:00Z",
+  "docs": [
+    {
+      "id": "block-video-001",
+      "block": "video",
+      "data": [
+        {
+          "id": "kv-video-001",
+          "key": "video",
+          "value": {
+            "id": "video-001",
+            "assetId": "asset-video-001",
+            "title": "Final Production Video",
+            "url": "https://example.com/assets/final-video.mp4",
+            "thumbnailUrl": "https://example.com/assets/final-video-thumb.jpg",
+            "type": "video",
+            "duration": "15s",
+            "description": "最终交付视频"
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+**BlockId 示例**（支持两种方式）：
+
+**方式1：层级路径**
+
+- `final-video` - 文档根节点
+- `final-video.docs[0].block` - video 区块
+- `final-video.docs[0].data[0].key` - video 字段
+
+**方式2：唯一ID（推荐）**
+
+- `final-video-001` - 文档根节点ID
+- `block-video-001` - video 区块ID
+- `kv-video-001` - video 键值对ID
 
 ## 前端工具函数
 
@@ -563,7 +674,7 @@ export function generateBlockId(
 }
 
 /**
- * 生成 BlockId（灵活结构）- 推荐使用
+ * 生成 BlockId（灵活结构 - 层级路径方式）
  */
 export function generateFlexibleBlockId(
   type: string,
@@ -577,22 +688,47 @@ export function generateFlexibleBlockId(
 }
 
 /**
- * 为灵活文档生成所有 BlockId
+ * 生成 BlockId（灵活结构 - 唯一ID方式，推荐）
+ */
+export function generateBlockIdById(
+  doc: FlexibleDocument,
+  blockId?: Id,
+  kvId?: Id
+): string | null {
+  if (kvId) {
+    // 查找对应的 KeyValuePair ID
+    for (const block of doc.docs) {
+      if (block.id === blockId) {
+        const kv = block.data.find((d) => d.id === kvId);
+        if (kv) return kv.id;
+      }
+    }
+  } else if (blockId) {
+    // 查找对应的 DocumentBlock ID
+    const block = doc.docs.find((d) => d.id === blockId);
+    if (block) return block.id;
+  }
+  // 返回文档ID
+  return doc.id;
+}
+
+/**
+ * 为灵活文档生成所有 BlockId（使用唯一ID方式）
  */
 export function generateAllBlockIds(doc: FlexibleDocument): string[] {
   const blockIds: string[] = [];
 
-  // 文档根节点
-  blockIds.push(doc.type);
+  // 文档根节点ID
+  blockIds.push(doc.id);
 
   // 遍历所有区块
-  doc.docs.forEach((block, blockIndex) => {
-    // 区块标识 BlockId
-    blockIds.push(generateFlexibleBlockId(doc.type, blockIndex));
+  doc.docs.forEach((block) => {
+    // 区块ID
+    blockIds.push(block.id);
 
-    // 区块内所有数据项的 BlockId
-    block.data.forEach((item, dataIndex) => {
-      blockIds.push(generateFlexibleBlockId(doc.type, blockIndex, dataIndex));
+    // 区块内所有数据项的ID
+    block.data.forEach((item) => {
+      blockIds.push(item.id);
     });
   });
 
@@ -600,17 +736,51 @@ export function generateAllBlockIds(doc: FlexibleDocument): string[] {
 }
 
 /**
- * 从 DOM 元素获取 BlockId
+ * 从 DOM 元素获取 BlockId（优先使用 data-id，回退到 data-block-id）
  */
 export function getBlockIdFromElement(element: HTMLElement): string | null {
-  return element.getAttribute("data-block-id");
+  return (
+    element.getAttribute("data-id") || element.getAttribute("data-block-id")
+  );
 }
 
 /**
- * 根据 BlockId 查找 DOM 元素
+ * 根据 BlockId 查找 DOM 元素（优先使用 data-id，回退到 data-block-id）
  */
 export function findElementByBlockId(blockId: string): HTMLElement | null {
-  return document.querySelector(`[data-block-id="${blockId}"]`) as HTMLElement;
+  return (document.querySelector(`[data-id="${blockId}"]`) ||
+    document.querySelector(`[data-block-id="${blockId}"]`)) as HTMLElement;
+}
+
+/**
+ * 根据 ID 查找文档中的节点
+ */
+export function findNodeById(
+  doc: FlexibleDocument,
+  id: Id
+): {
+  type: "document" | "block" | "kv";
+  node: FlexibleDocument | DocumentBlock | KeyValuePair;
+} | null {
+  // 检查是否是文档ID
+  if (doc.id === id) {
+    return { type: "document", node: doc };
+  }
+
+  // 检查是否是区块ID
+  for (const block of doc.docs) {
+    if (block.id === id) {
+      return { type: "block", node: block };
+    }
+    // 检查是否是键值对ID
+    for (const kv of block.data) {
+      if (kv.id === id) {
+        return { type: "kv", node: kv };
+      }
+    }
+  }
+
+  return null;
 }
 
 /**
@@ -756,7 +926,7 @@ async function deleteComment(
 #### 灵活结构渲染（推荐）
 
 ```tsx
-// 灵活文档渲染组件
+// 灵活文档渲染组件（使用唯一ID方式，推荐）
 function FlexibleDocumentRenderer({
   doc,
   comments,
@@ -765,38 +935,36 @@ function FlexibleDocumentRenderer({
   comments: CommentMap;
 }) {
   return (
-    <div data-block-id={doc.type}>
-      <h1 data-block-id={`${doc.type}.title`}>{doc.title}</h1>
+    <div data-block-id={doc.id} data-id={doc.id}>
+      <h1 data-block-id={doc.id} data-id={doc.id}>
+        {doc.title}
+      </h1>
 
       {/* 渲染所有区块 */}
-      {doc.docs.map((block, blockIndex) => {
-        const blockBlockId = generateFlexibleBlockId(doc.type, blockIndex);
-        const blockComments = comments[blockBlockId];
+      {doc.docs.map((block) => {
+        const blockComments = comments[block.id];
 
         return (
           <div
-            key={blockIndex}
-            data-block-id={blockBlockId}
+            key={block.id}
+            data-block-id={block.id}
+            data-id={block.id}
             className="document-block"
           >
-            <h2 data-block-id={blockBlockId}>
+            <h2 data-block-id={block.id} data-id={block.id}>
               {block.block}
               {blockComments && <CommentBadge count={blockComments.length} />}
             </h2>
 
             {/* 渲染区块内的所有键值对 */}
-            {block.data.map((item, dataIndex) => {
-              const itemBlockId = generateFlexibleBlockId(
-                doc.type,
-                blockIndex,
-                dataIndex
-              );
-              const itemComments = comments[itemBlockId];
+            {block.data.map((item) => {
+              const itemComments = comments[item.id];
 
               return (
                 <div
-                  key={dataIndex}
-                  data-block-id={itemBlockId}
+                  key={item.id}
+                  data-block-id={item.id}
+                  data-id={item.id}
                   className="key-value-item"
                 >
                   <label className="key-label">{item.key}</label>
@@ -967,22 +1135,31 @@ brief.docs[1].data[0].key; // productName 字段
 ### 灵活结构的评论绑定示例
 
 ```typescript
-// 在区块上添加评论
+// 在区块上添加评论（使用唯一ID方式，推荐）
 const blockComment: Comment = {
   id: "comment-001",
-  blockId: "brief.docs[0].block",
+  blockId: "block-videoConfig-001", // 直接使用区块ID
   author: { id: "user-1", name: "张三" },
   content: "这个视频配置需要调整",
   createdAt: "2025-01-26T10:00:00Z",
 };
 
-// 在字段上添加评论
+// 在字段上添加评论（使用唯一ID方式，推荐）
 const fieldComment: Comment = {
   id: "comment-002",
-  blockId: "brief.docs[0].data[0].key",
+  blockId: "kv-duration-001", // 直接使用键值对ID
   author: { id: "user-2", name: "李四" },
   content: "时长需要改为 30s",
   createdAt: "2025-01-26T11:00:00Z",
+};
+
+// 也可以使用层级路径方式
+const blockCommentByPath: Comment = {
+  id: "comment-003",
+  blockId: "brief.docs[0].block", // 使用层级路径
+  author: { id: "user-1", name: "张三" },
+  content: "这个视频配置需要调整",
+  createdAt: "2025-01-26T10:00:00Z",
 };
 ```
 
@@ -996,20 +1173,34 @@ const fieldComment: Comment = {
   "createdAt": "2025-02-15T14:05:00Z",
   "docs": [
     {
+      "id": "block-videoConfig-001",
       "block": "videoConfig",
       "data": [
-        { "key": "duration", "value": "15s" },
-        { "key": "aspectRatio", "value": "16:9" },
-        { "key": "resolution", "value": "1080p" },
-        { "key": "frameRate", "value": "30fps" }
+        { "id": "kv-duration-001", "key": "duration", "value": "15s" },
+        { "id": "kv-aspectRatio-001", "key": "aspectRatio", "value": "16:9" },
+        { "id": "kv-resolution-001", "key": "resolution", "value": "1080p" },
+        { "id": "kv-frameRate-001", "key": "frameRate", "value": "30fps" }
       ]
     },
     {
+      "id": "block-contentRequirement-001",
       "block": "contentRequirement",
       "data": [
-        { "key": "productName", "value": "Product Name" },
-        { "key": "productLink", "value": "https://example.com" },
-        { "key": "primaryPlatforms", "value": ["TikTok", "Youtube"] }
+        {
+          "id": "kv-productName-001",
+          "key": "productName",
+          "value": "Product Name"
+        },
+        {
+          "id": "kv-productLink-001",
+          "key": "productLink",
+          "value": "https://example.com"
+        },
+        {
+          "id": "kv-primaryPlatforms-001",
+          "key": "primaryPlatforms",
+          "value": ["TikTok", "Youtube"]
+        }
       ]
     }
   ]
@@ -1078,9 +1269,11 @@ const comment: Comment = {
 
 本协议设计实现了：
 
-- ✅ **DOM 节点绑定**：通过 `data-block-id` 属性关联 JSON 和 DOM
-- ✅ **评论双向绑定**：评论与节点双向定位
+- ✅ **唯一ID标识**：每个层级（Document、DocumentBlock、KeyValuePair）都有唯一ID，便于追踪和引用
+- ✅ **DOM 节点绑定**：通过 `data-block-id` 或 `data-id` 属性关联 JSON 和 DOM
+- ✅ **评论双向绑定**：评论与节点双向定位，支持通过ID或层级路径引用
 - ✅ **高效序列化**：扁平化的存储结构，便于查询和更新
-- ✅ **层级路径标识**：清晰的 BlockId 规则，支持嵌套结构
+- ✅ **灵活的 BlockId**：支持层级路径和唯一ID两种方式，推荐使用唯一ID
 - ✅ **后端友好**：使用 JSONB 存储，支持高效查询
 - ✅ **动态字段支持**：支持业务字段的动态扩展，适应业务变化
+- ✅ **统一数据结构**：所有模块统一使用 FlexibleDocument 格式
