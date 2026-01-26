@@ -42,6 +42,22 @@ export default function DemosPage(): JSX.Element {
       tags: ["Slate.js", "React", "Comments", "SSE"],
       status: "已完成",
     },
+    {
+      id: "chat-voice",
+      title: "实时语音对话 Demo",
+      description: "基于 Web Speech API 和 Next.js 的实时语音对话演示",
+      href: "/demos/chat",
+      tags: ["Web Speech API", "Next.js", "实时语音"],
+      status: "已完成",
+    },
+    {
+      id: "screen-recorder",
+      title: "屏幕录制 Demo",
+      description: "基于 React Media Recorder 实现的浏览器原生屏幕录制功能",
+      href: "/demos/screen-recorder",
+      tags: ["Screen Recording", "React Media Recorder", "Web API"],
+      status: "已完成",
+    },
     // 后续可以在这里添加更多案例
     // {
     //   id: "example-demo",

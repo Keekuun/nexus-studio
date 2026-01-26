@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>实时语音对话(终极完整版+快捷键)</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{padding:20px;font-family:sans-serif;max-width:800px;margin:0 auto;transition:background .3s,color .3s}
+    body.light{background:#fff;color:#333}
+    body.dark{background:#1a1a1a;color:#f5f5f5}
+    .controls{margin:20px 0;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    button{padding:8px 16px;border:none;border-radius:4px;background:#1677ff;color:#fff;cursor:pointer;transition:background .3s}
+    button:disabled{background:#ccc;cursor:not-allowed}
+    .clear-btn{background:#f53f3f}
+    .mute-btn{background:#722ed1}
+    .mute-btn.active{background:#f7ba1e;color:#333}
+    .export-btn{background:#36b37e}
+    .theme-btn{background:#8e44ad}
+    .subtitle{position:fixed;bottom:50px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.7);color:#fff;padding:10px 20px;border-radius:8px;font-size:18px;white-space:nowrap;z-index:99}
+    .dark .subtitle{background:rgba(30,30,30,0.9)}
+    .chat-box{margin-top:20px;border:1px solid #eee;border-radius:8px;padding:15px;height:400px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;transition:background .3s,border .3s}
+    .light .chat-box{background:#fff;border:1px solid #eee}
+    .dark .chat-box{background:#2d2d2d;border:1px solid #444}
+    .msg{padding:10px 15px;border-radius:8px;max-width:70%;transition:background .3s}
+    .light .user-msg{background:#e6f4ff;color:#333}
+    .light .llm-msg{background:#f5f5f5;color:#333}
+    .dark .user-msg{background:#253b56;color:#e9e9e9}
+    .dark .llm-msg{background:#3a3a3a;color:#e9e9e9}
+    .state-tag{font-size:12px;color:#666;margin:5px 0}
+    .dark .state-tag{color:#aaa}
+    .volume-wrap{display:flex;align-items:center;gap:4px;margin-left:10px}
+    .volume-bar{width:4px;height:20px;background:#eee;border-radius:2px;transition:height 0.1s ease,background 0.1s ease}
+    .light .volume-bar.active{background:#1677ff}
+    .dark .volume-bar{background:#444}
+    .dark .volume-bar.active{background:#4096ff}
+    .hotkey-tip{font-size:12px;color:#666;margin-top:8px}
+    .dark .hotkey-tip{color:#aaa}
+  </style>
+</head>
+<body class="light">
+  <div class="state-tag" id="stateTag">状态：空闲</div>
+  <div class="hotkey-tip">快捷键：空格=静音/取消静音 | ESC=结束对话 | Ctrl+E=导出对话 | Ctrl+R=清空对话</div>
+  <div class="controls">
+    <button id="startBtn">开始对话</button>
+    <button id="stopBtn" disabled>结束对话</button>
+    <button id="clearBtn" class="clear-btn">清空对话</button>
+    <button id="exportBtn" class="export-btn">导出对话</button>
+    <button id="muteBtn" class="mute-btn" disabled>静音麦克风</button>
+    <button id="themeBtn" class="theme-btn">深色模式</button>
+    <div class="volume-wrap" id="volumeWrap">
+      <div class="volume-bar"></div>
+      <div class="volume-bar"></div>
+      <div class="volume-bar"></div>
+      <div class="volume-bar"></div>
+      <div class="volume-bar"></div>
+    </div>
+  </div>
+  <div class="chat-box" id="chatBox"></div>
+  <div class="subtitle" id="subtitle">实时语音...</div>
+
+<script>
+class VoiceChatStateMachine {
+  constructor() {
+    this.state = 'idle';
+    this.silenceTimer = null;
+    this.silenceThreshold = 500;
+    this.noiseThreshold = 0.02;
+    this.asr = null;
+    this.tts = null;
+    this.llmStreamController = null;
+    this.audioStream = null;
+    this.userFinalText = '';
+    this.isMuted = false;
+    this.retryCount = 0;
+    this.maxRetry = 3;
+    this.retryTimer = null;
+    this.STORAGE_KEY = 'voiceChatHistory';
+    this.THEME_KEY = 'voiceChatTheme';
+    // DOM挂载
+    this.subtitleDom = document.getElementById('subtitle');
+    this.chatBoxDom = document.getElementById('chatBox');
+    this.stateTagDom = document.getElementById('stateTag');
+    this.volumeBars = document.querySelectorAll('.volume-bar');
+    this.muteBtn = document.getElementById('muteBtn');
+    this.startBtn = document.getElementById('startBtn');
+    this.stopBtn = document.getElementById('stopBtn');
+    this.themeBtn = document.getElementById('themeBtn');
+    this.exportBtn = document.getElementById('exportBtn');
+    this.clearBtn = document.getElementById('clearBtn');
+    this.body = document.body;
+  }
+
+  init() {
+    const SpeechRecog = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecog) {
+      this.updateSubtitle('浏览器不支持，请用Chrome/Edge');
+      this.disableAllBtns();
+      return;
+    }
+    this.asr = new SpeechRecog();
+    this.asr.continuous = true;
+    this.asr.interimResults = true;
+    this.asr.lang = 'zh-CN';
+    this.initTTS();
+    this.bindEvents();
+    this.bindErrorEvents();
+    this.bindHotkeys(); // 绑定快捷键
+    this.loadChatHistory();
+    this.loadTheme();
+  }
+
+  initTTS() {
+    this.tts = new SpeechSynthesisUtterance();
+    this.tts.lang = 'zh-CN';
+    this.tts.rate = 1;
+    this.tts.volume = 1;
+  }
+
+  speakTTS(text) {
+    if(window.speechSynthesis.paused) window.speechSynthesis.resume();
+    window.speechSynthesis.cancel();
+    this.tts.text = text;
+    window.speechSynthesis.speak(this.tts);
+  }
+
+  async fetchLLMStream(prompt) {
+    this.llmStreamController?.abort();
+    this.llmStreamController = new AbortController();
+    const signal = this.llmStreamController.signal;
+    try {
+      const mockResp = ['您好，', '我是智能助手，', '请问有什么可以帮您？'];
+      for(let chunk of mockResp){
+        if(signal.aborted) break;
+        await new Promise(resolve=>setTimeout(resolve, 500));
+        yield chunk;
+      }
+      return mockResp.join('');
+      /* 真实接口替换
+      const res = await fetch('你的LLM流式接口', {
+        method: 'POST',headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({prompt, stream:true}),signal
+      });
+      const reader = res.body.getReader();const decoder = new TextDecoder('utf-8');
+      while(true){
+        const {done, value} = await reader.read();
+        if(done||signal.aborted) break;
+        yield decoder.decode(value, {stream:true});
+      }
+      */
+    } catch (e) {
+      if (e.name !== 'AbortError') {
+        console.error('LLM失败：', e);
+        this.updateSubtitle('LLM接口异常，即将重试');
+        this.triggerRetry();
+      }
+      throw e;
+    }
+  }
+
+  bindEvents() {
+    this.asr.onresult = (e) => {
+      if(this.isMuted) return;
+      let interimText = '';let finalText = '';
+      for(let i=e.resultIndex; i<e.results.length; i++){
+        if(e.results[i].isFinal) finalText += e.results[i][0].transcript;
+        else interimText += e.results[i][0].transcript;
+      }
+      if(finalText) this.userFinalText += finalText;
+      this.updateSubtitle(this.userFinalText + interimText);
+      if (this.state !== 'speaking') this.setState('speaking');
+    };
+    this.detectAudioVolume();
+  }
+
+  bindErrorEvents() {
+    this.asr.onerror = (err) => {
+      console.warn('ASR错误：', err.error);
+      this.updateSubtitle(`语音识别异常(${err.error})，即将重试`);
+      this.asr.stop();
+      this.triggerRetry();
+    };
+    this.asr.onend = () => {
+      if(this.state !== 'idle' && !this.isMuted && !this.llmStreamController?.signal.aborted) {
+        this.updateSubtitle('语音识别断开，即将重试');
+        this.triggerRetry();
+      }
+    };
+    this.audioStream?.getTracks().forEach(track => {
+      track.onended = () => this.triggerRetry();
+      track.onerror = () => this.triggerRetry();
+    });
+  }
+
+  // 核心新增：快捷键绑定
+  bindHotkeys(){
+    document.addEventListener('keydown', (e)=>{
+      // 空格静音/取消静音  不冲突输入框
+      if(e.code === 'Space' && !e.target.tagName.match(/INPUT|TEXTAREA/)){
+        e.preventDefault();
+        !this.muteBtn.disabled && this.toggleMute();
+      }
+      // ESC 结束对话
+      if(e.code === 'Escape'){
+        !this.stopBtn.disabled && this.stop();
+      }
+      // Ctrl+E 导出对话
+      if(e.ctrlKey && e.code === 'KeyE'){
+        e.preventDefault();
+        this.exportChat();
+      }
+      // Ctrl+R 清空对话
+      if(e.ctrlKey && e.code === 'KeyR'){
+        e.preventDefault();
+        this.clearChat();
+      }
+    });
+  }
+
+  detectAudioVolume() {
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+      this.audioStream = stream;
+      this.bindErrorEvents();
+      const audioCtx = new AudioContext();
+      const analyser = audioCtx.createAnalyser();
+      audioCtx.createMediaStreamSource(stream).connect(analyser);
+      analyser.fftSize = 2048;
+      const buffer = new Uint8Array(analyser.frequencyBinCount);
+      setInterval(() => {
+        if(this.isMuted){
+          this.volumeBars.forEach(bar=>{bar.style.height='8px';bar.classList.remove('active')});
+          return;
+        }
+        analyser.getByteFrequencyData(buffer);
+        const volume = buffer.reduce((a, b) => a + b) / buffer.length / 255;
+        this.updateVolumeVisual(volume);
+        if (this.state === 'speaking') {
+          volume < this.noiseThreshold ? this.startSilenceTimer() : this.clearSilenceTimer();
+        } else if (this.state === 'llm' && volume > this.noiseThreshold) {
+          this.handleInterrupt();
+        }
+      }, 100);
+    }).catch(err=>{
+      this.updateSubtitle(`麦克风授权失败/异常：${err.message}`);
+      console.error(err);
+      this.disableAllBtns();
+    });
+  }
+
+  updateVolumeVisual(volume){
+    const level = Math.min(Math.floor(volume * 10), this.volumeBars.length);
+    this.volumeBars.forEach((bar, idx)=>{
+      bar.style.height = idx < level ? `${10 + idx*2}px` : '8px';
+      bar.classList.toggle('active', idx < level);
+    });
+  }
+
+  handleInterrupt() {
+    this.updateSubtitle('用户打断...');
+    window.speechSynthesis.cancel();
+    this.llmStreamController?.abort();
+    this.llmStreamController = null;
+    this.setState('speaking');
+  }
+
+  triggerRetry() {
+    if(this.retryCount >= this.maxRetry || this.state === 'idle' || this.isMuted) return;
+    
+    this.clearRetryTimer();
+    this.retryCount++;
+    this.updateSubtitle(`异常重试${this.retryCount}/${this.maxRetry}，2秒后恢复`);
+    
+    this.retryTimer = setTimeout(() => {
+      this.updateSubtitle('正在恢复语音识别...');
+      this.asr?.start();
+      this.bindErrorEvents();
+      this.retryCount = 0;
+    }, 2000);
+  }
+
+  clearRetryTimer() {
+    if(this.retryTimer) clearTimeout(this.retryTimer);
+    this.retryTimer = null;
+  }
+
+  toggleMute(){
+    this.isMuted = !this.isMuted;
+    this.muteBtn.textContent = this.isMuted ? '取消静音' : '静音麦克风';
+    this.muteBtn.classList.toggle('active', this.isMuted);
+    this.updateSubtitle(this.isMuted ? '麦克风已静音' : '实时语音...');
+    
+    if(this.isMuted) {
+      this.asr?.stop();
+      this.clearRetryTimer();
+    } else {
+      (this.state === 'speaking' || this.state === 'idle') && this.asr?.start();
+    }
+  }
+
+  toggleTheme(){
+    const isDark = this.body.classList.toggle('dark');
+    this.body.classList.toggle('light',!isDark);
+    this.themeBtn.textContent = isDark ? '浅色模式' : '深色模式';
+    localStorage.setItem(this.THEME_KEY,isDark?'dark':'light');
+  }
+  loadTheme(){
+    const theme = localStorage.getItem(this.THEME_KEY)||'light';
+    this.body.className = theme;
+    this.themeBtn.textContent = theme==='dark'?'浅色模式':'深色模式';
+  }
+
+  startSilenceTimer() {
+    this.clearSilenceTimer();
+    this.silenceTimer = setTimeout(() => {
+      if (this.state === 'speaking') this.setState('ready');
+    }, this.silenceThreshold);
+  }
+
+  clearSilenceTimer() {
+    this.silenceTimer && clearTimeout(this.silenceTimer);
+  }
+
+  setState(newState) {
+    this.clearSilenceTimer();
+    const oldState = this.state;
+    this.state = newState;
+    this.stateTagDom.textContent = `状态：${this.getStateText(newState)}`;
+    console.log(`状态切换：${oldState} -> ${newState}`);
+    switch(newState) {
+      case 'ready': this.callLLM(); break;
+      case 'llm': this.asr.stop(); break;
+      case 'speaking': !this.isMuted && this.asr.start(); break;
+      case 'idle': this.resetAll(); break;
+    }
+  }
+
+  async callLLM() {
+    this.setState('llm');
+    try {
+      const userPrompt = this.userFinalText.trim();
+      if(!userPrompt) {this.setState('idle');return;}
+      this.addChatMsg(userPrompt, 'user', true);
+      this.updateSubtitle('助手思考中...');
+      let llmFullText = '';
+      const llmStream = this.fetchLLMStream(userPrompt);
+      for await (const chunk of llmStream) {
+        if (this.state !== 'llm') break;
+        llmFullText += chunk;
+        this.speakTTS(chunk);
+        this.updateChatLastMsg(llmFullText, true);
+      }
+      this.state === 'llm' && this.setState('idle');
+    } catch (e) {
+      this.setState('idle');
+    }
+  }
+
+  saveChatHistory(history){
+    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(history));
+  }
+  loadChatHistory(){
+    const history = JSON.parse(localStorage.getItem(this.STORAGE_KEY) || '[]');
+    this.chatBoxDom.innerHTML = '';
+    history.forEach(item=>this.addChatMsg(item.text, item.role, false));
+  }
+  getCurrentHistory(){
+    const msgs = this.chatBoxDom.querySelectorAll('.msg');
+    return Array.from(msgs).map(msg=>({
+      text: msg.textContent,
+      role: msg.classList.contains('user-msg') ? 'user' : 'llm'
+    }));
+  }
+  clearLocalHistory(){
+    localStorage.removeItem(this.STORAGE_KEY);
+  }
+
+  exportChat(){
+    const history = this.getCurrentHistory();
+    if(history.length === 0){
+      this.updateSubtitle('无对话可导出');
+      return;
+    }
+    const time = new Date().toLocaleString();
+    let exportText = `==== 语音对话记录 ${time} ====\n`;
+    history.forEach((item, idx)=>{
+      exportText += `\n${item.role === 'user' ? '用户' : '助手'}：${item.text}\n`;
+    });
+    const blob = new Blob([exportText], {type: 'text/plain;charset=utf-8'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `语音对话_${Date.now()}.txt`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    this.updateSubtitle('对话已导出');
+  }
+
+  resetAll() {
+    window.speechSynthesis.cancel();
+    this.llmStreamController?.abort();
+    this.llmStreamController = null;
+    this.clearSilenceTimer();
+    this.clearRetryTimer();
+    this.userFinalText = '';
+    this.retryCount = 0;
+    this.updateSubtitle('实时语音...');
+    this.volumeBars.forEach(bar=>{
+      bar.style.height='8px';bar.classList.remove('active');
+    });
+  }
+
+  start() {
+    this.init();
+    this.setState('idle');
+    this.asr.start();
+    this.muteBtn.disabled = false;
+    this.retryCount = 0;
+  }
+
+  stop() {
+    this.setState('idle');
+    this.asr?.stop();
+    this.audioStream?.getTracks().forEach(t => t.stop());
+    this.userFinalText = '';
+    this.isMuted = false;
+    this.retryCount = 0;
+    this.clearRetryTimer();
+    this.muteBtn.textContent = '静音麦克风';
+    this.muteBtn.classList.remove('active');
+    this.muteBtn.disabled = true;
+    this.updateSubtitle('对话已结束');
+    this.startBtn.disabled = false;
+    this.stopBtn.disabled = true;
+  }
+
+  disableAllBtns() {
+    this.startBtn.disabled = true;
+    this.stopBtn.disabled = true;
+    this.muteBtn.disabled = true;
+  }
+
+  clearChat(){
+    this.chatBoxDom.innerHTML = '';
+    this.userFinalText = '';
+    this.clearLocalHistory();
+    this.updateSubtitle('实时语音...');
+  }
+
+  getStateText(state){
+    const map = {idle:'空闲', ready:'等待响应', llm:'助手响应', speaking:'用户说话'};
+    return map[state] || state;
+  }
+
+  updateSubtitle(text){
+    this.subtitleDom.textContent = text || '实时语音...';
+  }
+
+  addChatMsg(text, role, save=false){
+    const div = document.createElement('div');
+    div.className = `msg ${role}-msg`;
+    div.textContent = text;
+    this.chatBoxDom.appendChild(div);
+    this.chatBoxDom.scrollTop = this.chatBoxDom.scrollHeight;
+    if(save) this.saveChatHistory(this.getCurrentHistory());
+  }
+
+  updateChatLastMsg(text, save=false){
+    let lastMsg = this.chatBoxDom.lastChild;
+    if(!lastMsg || !lastMsg.classList.contains('llm-msg')){
+      this.addChatMsg(text, 'llm', save);
+    }else{
+      lastMsg.textContent = text;
+      this.chatBoxDom.scrollTop = this.chatBoxDom.scrollHeight;
+      if(save) this.saveChatHistory(this.getCurrentHistory());
+    }
+  }
+}
+
+// 页面交互绑定
+const voiceChat = new VoiceChatStateMachine();
+const startBtn = document.getElementById('startBtn');
+const stopBtn = document.getElementById('stopBtn');
+const clearBtn = document.getElementById('clearBtn');
+const exportBtn = document.getElementById('exportBtn');
+const muteBtn = document.getElementById('muteBtn');
+const themeBtn = document.getElementById('themeBtn');
+
+startBtn.onclick = ()=>{
+  voiceChat.start();
+  startBtn.disabled = true;
+  stopBtn.disabled = false;
+};
+stopBtn.onclick = ()=>{
+  voiceChat.stop();
+  startBtn.disabled = false;
+  stopBtn.disabled = true;
+};
+clearBtn.onclick = ()=>voiceChat.clearChat();
+exportBtn.onclick = ()=>voiceChat.exportChat();
+muteBtn.onclick = ()=>voiceChat.toggleMute();
+themeBtn.onclick = ()=>voiceChat.toggleTheme();
+</script>
+</body>
+</html>
