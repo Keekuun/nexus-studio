@@ -20,6 +20,8 @@ export {
   AssetImageViewer,
   type AssetImageViewerProps,
 } from "./asset-image-viewer";
+export { AssetGrid, type AssetGridProps } from "./asset-grid";
+export { AssetTable, type AssetTableProps } from "./asset-table";
 export { KeyValueRow, type KeyValueRowProps } from "./key-value-row";
 export { KeyValueItem, type KeyValueItemProps } from "./key-value-item";
 export {

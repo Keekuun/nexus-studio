@@ -188,3 +188,9 @@
     - 编写性能工具函数、cn工具函数、错误处理工具函数的单元测试
     - 所有测试通过（33个测试用例）
   - [ ] 文档完善（API文档、组件文档、使用指南）
+
+### 2026-01-26
+- Done: 新增 Storyboard 模块详情卡片（`chat/storyboard-card.tsx`），严格按 Figma 表格布局渲染 shots。
+- Done: 在 `chat/page.tsx` 接入 StoryboardCard，并将 MOCK_STORYBOARD 结构对齐 asset.md（block: shots / key: shots）。
+- Done: 新增 FinalVideo 模块详情卡片（`chat/final-video-card.tsx`），按 Figma 视频播放器+缩略图条布局展示。
+- Done: 在 `chat/page.tsx` 接入 FinalVideoCard，并将 MOCK_FINAL_VIDEO 结构对齐 asset.md（block: video / key: video）。

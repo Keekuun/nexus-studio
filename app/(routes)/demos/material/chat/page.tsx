@@ -17,6 +17,11 @@ import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { FlexibleDocument, DocumentType } from "../creative-types";
+import { BriefCard } from "./brief-card";
+import { CreativePlanningCard } from "./creative-planning-card";
+import { VisualAssetCard } from "./visual-asset-card";
+import { StoryboardCard } from "./storyboard-card";
+import { FinalVideoCard } from "./final-video-card";
 
 // ==================== 图标组件 ====================
 const Icons = {
@@ -359,225 +364,353 @@ const MODULE_CONFIG: Record<
 
 // ==================== Mock 数据 ====================
 
-// 1. Brief 模块
+// 1. Brief 模块 - 严格按照 asset.md 定义的字段结构
 const MOCK_BRIEF: FlexibleDocument = {
   type: "brief",
   id: "brief-001",
-  title: "Brief V2 - 智能手表产品视频需求",
-  createdAt: "2025-01-26T10:00:00Z",
+  title: "Brief V2 Reference Picture Added",
+  createdAt: "2025-02-15T14:05:00Z",
   docs: [
     {
       id: "block-videoConfig-001",
-      block: "视频配置",
+      block: "videoConfig",
       data: [
-        { id: "kv-duration", key: "时长", value: "30秒" },
-        { id: "kv-aspectRatio", key: "画面比例", value: "9:16（竖版）" },
-        { id: "kv-resolution", key: "分辨率", value: "1080p" },
-        { id: "kv-frameRate", key: "帧率", value: "30fps" },
-        { id: "kv-codec", key: "编码格式", value: "H.264" },
+        { id: "kv-duration-001", key: "duration", value: "15s" },
+        { id: "kv-aspectRatio-001", key: "aspectRatio", value: "16:9" },
+        { id: "kv-resolution-001", key: "resolution", value: "1080p" },
+        { id: "kv-frameRate-001", key: "frameRate", value: "30fps" },
+        { id: "kv-codec-001", key: "codec", value: "H.264" },
       ],
     },
     {
       id: "block-contentRequirement-001",
-      block: "内容需求",
+      block: "contentRequirement",
       data: [
-        { id: "kv-productName", key: "产品名称", value: "智能手表 Pro Max" },
         {
-          id: "kv-productLink",
-          key: "产品链接",
-          value: "https://shop.example.com/watch-pro-max",
+          id: "kv-productName-001",
+          key: "productName",
+          value: "Thank you for providing all the details",
         },
         {
-          id: "kv-platforms",
-          key: "投放平台",
-          value: ["抖音", "快手", "小红书", "视频号"],
+          id: "kv-productLink-001",
+          key: "productLink",
+          value: "blackhead.com/product/3082908blackhead.com/produc",
         },
         {
-          id: "kv-targetAudience",
-          key: "目标人群",
-          value: "18-35岁都市年轻白领",
+          id: "kv-primaryPlatforms-001",
+          key: "primaryPlatforms",
+          value: ["TikTok", "Youtube"],
         },
         {
-          id: "kv-corePoints",
-          key: "核心卖点",
-          value: "血氧监测、7天超长续航、100+运动模式、时尚轻薄设计",
+          id: "kv-coreSellingPoints-001",
+          key: "coreSellingPoints",
+          value:
+            "Thank you for providing all the details! I have summarized everything we've discussed for your review. Please confirm that all the information is accurate.",
         },
-        { id: "kv-budget", key: "预算", value: "15000元" },
+        {
+          id: "kv-targetAudience-001",
+          key: "targetAudience",
+          value: "18-35",
+        },
+        { id: "kv-budget-001", key: "budget", value: 10000 },
       ],
     },
     {
       id: "block-referenceAssets-001",
-      block: "参考素材",
+      block: "referenceAssets",
       data: [
         {
-          id: "kv-styleRef",
-          key: "风格参考",
-          value: "Apple Watch 广告、华为手表宣传片",
-        },
-        {
-          id: "kv-toneRef",
-          key: "调性参考",
-          value: "科技感、年轻活力、健康生活",
+          id: "kv-assets-001",
+          key: "assets",
+          value: [
+            {
+              id: "ref-001",
+              assetId: "asset-ref-001",
+              title: "Jewelry Design Sketch",
+              url: "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=400&h=500&fit=crop",
+              type: "image",
+              description: "珠宝设计草图参考",
+            },
+            {
+              id: "ref-002",
+              assetId: "asset-ref-002",
+              title: "Fashion Model",
+              url: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=600&fit=crop",
+              type: "image",
+              description: "时尚模特佩戴饰品参考",
+            },
+            {
+              id: "ref-003",
+              assetId: "asset-ref-003",
+              title: "Modern Space",
+              url: "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?w=400&h=700&fit=crop",
+              type: "image",
+              description: "极简现代空间参考",
+            },
+            {
+              id: "ref-004",
+              assetId: "asset-ref-004",
+              title: "Model Video Clip",
+              url: "https://videos.pexels.com/video-files/3209828/3209828-hd_1920_1080_25fps.mp4",
+              thumbnailUrl:
+                "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=500&fit=crop",
+              type: "video",
+              duration: "15s",
+              description: "模特展示视频片段",
+            },
+          ],
         },
       ],
     },
   ],
 };
 
-// 2. CreativePlanning 模块
+// 2. CreativePlanning 模块 - 严格按照 asset.md 定义的字段结构
 const MOCK_CREATIVE_PLANNING: FlexibleDocument = {
   type: "creative-planning",
   id: "creative-planning-001",
-  title: "创意策划 V1 - 活力生活主题",
-  createdAt: "2025-01-26T10:30:00Z",
+  title: "V2 - Creative Confirmation",
+  createdAt: "2025-02-15T14:05:00Z",
   docs: [
     {
       id: "block-concepts-001",
-      block: "创意概念",
-      data: [
-        { id: "kv-mainTheme", key: "主题", value: "活力每一刻" },
-        { id: "kv-tagline", key: "广告语", value: "戴上Pro Max，掌控健康节奏" },
-        {
-          id: "kv-narrative",
-          key: "叙事角度",
-          value: "第一人称视角，展示都市白领一天的健康生活",
-        },
-      ],
-    },
-    {
-      id: "block-creativeDirection-001",
-      block: "创意方向",
+      block: "concepts",
       data: [
         {
-          id: "kv-concept1",
-          key: "方案A - 晨跑达人",
-          value: {
-            title: "晨跑达人",
-            tags: ["运动", "健康监测"],
-            description:
-              "清晨6点，主角戴着手表开始晨跑，手表实时显示心率、配速，展现科技赋能运动的场景",
-          },
-        },
-        {
-          id: "kv-concept2",
-          key: "方案B - 办公室精英",
-          value: {
-            title: "办公室精英",
-            tags: ["久坐提醒", "血氧监测"],
-            description:
-              "办公室场景，手表提醒站立休息，一键测量血氧，展现对健康的关怀",
-          },
-        },
-        {
-          id: "kv-concept3",
-          key: "方案C - 全场景生活",
-          value: {
-            title: "全场景生活",
-            tags: ["综合展示"],
-            description: "融合晨跑、办公、约会、睡眠多场景，展现手表全天候陪伴",
-          },
-        },
-      ],
-    },
-    {
-      id: "block-selectedConcept-001",
-      block: "选定方案",
-      data: [
-        { id: "kv-selected", key: "最终选择", value: "方案C - 全场景生活" },
-        {
-          id: "kv-reason",
-          key: "选择理由",
-          value: "更全面展示产品功能，覆盖更多使用场景，提升用户共鸣",
+          id: "kv-concepts-001",
+          key: "concepts",
+          value: [
+            {
+              id: "concept-001",
+              title: "The Morning Miracle",
+              tags: ["Product-First"],
+              coreCreative:
+                "An organic construction of silver filaments in a white void that solidifies into body architecture on a cold, confident model.",
+              outline: [
+                "Mascot walks along a sunny school path holding a slice of toast in its mouth.",
+                "Mascot stops as a magical golden swirl of energy envelops its body in a bright flash.",
+                "Sailor Moon Mascot strikes a signature heroic pose in front of a glowing crescent moon backdrop.",
+              ],
+              assets: [
+                {
+                  id: "asset-001",
+                  assetId: "asset-001",
+                  title: "CITY DUSK",
+                  url: "https://images.unsplash.com/photo-1514565131-fce0801e5785?w=800&h=400&fit=crop",
+                  type: "image",
+                },
+                {
+                  id: "asset-002",
+                  assetId: "asset-002",
+                  title: "WARM ENTRANCE",
+                  url: "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=200&h=300&fit=crop",
+                  type: "image",
+                },
+                {
+                  id: "asset-003",
+                  assetId: "asset-003",
+                  title: "MOONLIT REFLECTION",
+                  url: "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=200&h=300&fit=crop",
+                  type: "image",
+                },
+                {
+                  id: "asset-004",
+                  assetId: "asset-004",
+                  title: "SERENE PORTRAIT",
+                  url: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=300&fit=crop",
+                  type: "image",
+                },
+                {
+                  id: "asset-005",
+                  assetId: "asset-005",
+                  title: "NIGHT RITUAL",
+                  url: "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?w=200&h=300&fit=crop",
+                  type: "image",
+                },
+              ],
+            },
+            {
+              id: "concept-002",
+              title: 'The "9-to-5 & Beyond"',
+              tags: ["Story-Driven"],
+              coreCreative:
+                "An organic construction of silver filaments in a white void that solidifies into body architecture on a cold, confident model.",
+              outline: [
+                "Mascot walks along a sunny school path holding a slice of toast in its mouth.",
+                "Mascot stops as a magical golden swirl of energy envelops its body in a bright flash.",
+                "Sailor Moon Mascot strikes a signature heroic pose in front of a glowing crescent moon backdrop.",
+              ],
+              assets: [
+                {
+                  id: "asset-006",
+                  assetId: "asset-006",
+                  title: "Celestial Bag",
+                  url: "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=200&h=300&fit=crop",
+                  type: "image",
+                },
+                {
+                  id: "asset-007",
+                  assetId: "asset-007",
+                  title: "Quilted Detail",
+                  url: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=200&h=300&fit=crop",
+                  type: "image",
+                },
+                {
+                  id: "asset-008",
+                  assetId: "asset-008",
+                  title: "Golden chain",
+                  url: "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=200&h=300&fit=crop",
+                  type: "image",
+                },
+                {
+                  id: "asset-009",
+                  assetId: "asset-009",
+                  title: "Night style",
+                  url: "https://images.unsplash.com/photo-1509631179647-0177331693ae?w=200&h=300&fit=crop",
+                  type: "image",
+                },
+              ],
+            },
+            {
+              id: "concept-003",
+              title: "Luxury Lifestyle",
+              tags: ["High-Impact"],
+              coreCreative:
+                "An organic construction of silver filaments in a white void that solidifies into body architecture on a cold, confident model.",
+              outline: [
+                "Mascot walks along a sunny school path holding a slice of toast in its mouth.",
+                "Mascot stops as a magical golden swirl of energy envelops its body in a bright flash.",
+                "Sailor Moon Mascot strikes a signature heroic pose in front of a glowing crescent moon backdrop.",
+              ],
+              assets: [
+                {
+                  id: "asset-010",
+                  assetId: "asset-010",
+                  title: "Luxury Product",
+                  url: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&h=400&fit=crop",
+                  type: "image",
+                },
+              ],
+            },
+          ],
         },
       ],
     },
   ],
 };
 
-// 3. VisualAsset 模块
+// 3. VisualAsset 模块 - 严格按照 asset.md 定义的字段结构
 const MOCK_VISUAL_ASSET: FlexibleDocument = {
   type: "visual-asset",
   id: "visual-asset-001",
-  title: "视觉素材 V1 - 角色与场景确认",
-  createdAt: "2025-01-26T11:00:00Z",
+  title: "Assets V2 - Character changed",
+  createdAt: "2025-02-15T14:05:00Z",
   docs: [
     {
       id: "block-creativeConcept-001",
-      block: "创意概念",
+      block: "creativeConcept",
       data: [
-        { id: "kv-concept", key: "选定概念", value: "全场景生活" },
         {
-          id: "kv-visualStyle",
-          key: "视觉风格",
-          value: "明亮清新、都市感、科技质感",
+          id: "kv-concept-001",
+          key: "concept",
+          value: "The Morning Miracle",
         },
       ],
     },
     {
-      id: "block-characters-001",
-      block: "角色设定",
+      id: "block-coreCreative-001",
+      block: "coreCreative",
       data: [
         {
-          id: "kv-mainChar",
-          key: "主角",
-          value: {
-            name: "都市白领女性",
-            age: "25-28岁",
-            style: "时尚简约、活力阳光",
-            description: "热爱运动和健康生活的年轻职场女性",
-          },
-        },
-        {
-          id: "kv-supportChar",
-          key: "配角",
-          value: {
-            name: "男友/闺蜜",
-            description: "约会场景中出现，增加生活感",
-          },
+          id: "kv-description-001",
+          key: "description",
+          value:
+            "An organic construction of silver filaments in a white void that solidifies into body architecture on a cold, confident model.",
         },
       ],
     },
     {
-      id: "block-scenes-001",
-      block: "场景素材",
+      id: "block-assetGroups-001",
+      block: "assetGroups",
       data: [
         {
-          id: "kv-scene1",
-          key: "场景1 - 晨跑",
-          value: "城市公园晨光、跑道、绿植",
+          id: "kv-groups-001",
+          key: "groups",
+          value: [
+            {
+              blockType: "asset-group",
+              groupTitle: "Character",
+              assets: [
+                {
+                  id: "char-001",
+                  assetId: "asset-char-001",
+                  title: "White Male",
+                  url: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=500&fit=crop",
+                  type: "image",
+                  description:
+                    "Use deep red tones with angled volumetric light cutting through subtle haze to create",
+                },
+                {
+                  id: "char-002",
+                  assetId: "asset-char-002",
+                  title: "White Female",
+                  url: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=500&fit=crop",
+                  type: "image",
+                  description:
+                    "Use deep red tones with angled volumetric light cutting through subtle haze to create",
+                },
+              ],
+            },
+            {
+              blockType: "asset-group",
+              groupTitle: "Prop",
+              assets: [
+                {
+                  id: "prop-001",
+                  assetId: "asset-prop-001",
+                  title: "Flag",
+                  url: "https://images.unsplash.com/photo-1569974507005-6dc61f97fb5c?w=400&h=500&fit=crop",
+                  type: "image",
+                  description:
+                    "Reuse of brand-provided character drawing to ensure identity consistency; requires technical post-processing for transparency.",
+                },
+                {
+                  id: "prop-002",
+                  assetId: "asset-prop-002",
+                  title: "Santa Clause",
+                  url: "https://images.unsplash.com/photo-1543589077-47d81606c1bf?w=400&h=500&fit=crop",
+                  type: "image",
+                  description:
+                    'Essential prop for establishing the classic "late for school" anime trope.',
+                },
+              ],
+            },
+            {
+              blockType: "asset-group",
+              groupTitle: "Main Scene",
+              assets: [
+                {
+                  id: "scene-001",
+                  assetId: "asset-scene-001",
+                  title: "Flag",
+                  url: "https://images.unsplash.com/photo-1569974507005-6dc61f97fb5c?w=400&h=500&fit=crop",
+                  type: "image",
+                  description:
+                    "Reuse of brand-provided character drawing to ensure identity consistency; requires technical post-processing for transparency.",
+                },
+                {
+                  id: "scene-002",
+                  assetId: "asset-scene-002",
+                  title: "Shot 4",
+                  url: "https://images.unsplash.com/photo-1519681393784-d120267933ba?w=400&h=500&fit=crop",
+                  type: "image",
+                  description:
+                    'Essential prop for establishing the classic "late for school" anime trope.',
+                },
+              ],
+            },
+          ],
         },
-        {
-          id: "kv-scene2",
-          key: "场景2 - 办公室",
-          value: "现代简约办公区、落地窗、绿植",
-        },
-        {
-          id: "kv-scene3",
-          key: "场景3 - 咖啡厅",
-          value: "精品咖啡店、暖色调、约会氛围",
-        },
-        {
-          id: "kv-scene4",
-          key: "场景4 - 卧室",
-          value: "温馨卧室、柔和灯光、睡眠场景",
-        },
-      ],
-    },
-    {
-      id: "block-productShots-001",
-      block: "产品素材",
-      data: [
-        {
-          id: "kv-product1",
-          key: "产品主图",
-          value: "45度侧视角，展示表盘和表带",
-        },
-        {
-          id: "kv-product2",
-          key: "功能界面",
-          value: "心率、血氧、睡眠、运动模式界面截图",
-        },
-        { id: "kv-product3", key: "细节特写", value: "表冠、传感器、充电底座" },
       ],
     },
   ],
@@ -587,109 +720,77 @@ const MOCK_VISUAL_ASSET: FlexibleDocument = {
 const MOCK_STORYBOARD: FlexibleDocument = {
   type: "storyboard",
   id: "storyboard-001",
-  title: "分镜脚本 V1 - 30秒完整版",
-  createdAt: "2025-01-26T11:30:00Z",
+  title: "Keyframe V2 - 2 shots changed",
+  createdAt: "2025-02-15T14:05:00Z",
   docs: [
     {
-      id: "block-overview-001",
-      block: "脚本概览",
-      data: [
-        { id: "kv-totalDuration", key: "总时长", value: "30秒" },
-        { id: "kv-shotCount", key: "镜头数量", value: "8个镜头" },
-        { id: "kv-bgm", key: "背景音乐", value: "轻快电子节奏，积极向上" },
-      ],
-    },
-    {
       id: "block-shots-001",
-      block: "分镜列表",
+      block: "shots",
       data: [
         {
-          id: "kv-shot1",
-          key: "镜头1",
-          value: {
-            duration: "3s",
-            scene: "晨跑",
-            description: "清晨阳光透过窗帘，手表震动提醒起床",
-            camera: "特写",
-            audio: "轻柔闹铃声",
-          },
-        },
-        {
-          id: "kv-shot2",
-          key: "镜头2",
-          value: {
-            duration: "4s",
-            scene: "晨跑",
-            description: "主角在公园跑步，手表显示心率120bpm",
-            camera: "跟拍",
-            audio: "背景音乐渐起",
-          },
-        },
-        {
-          id: "kv-shot3",
-          key: "镜头3",
-          value: {
-            duration: "4s",
-            scene: "办公室",
-            description: "办公桌前工作，手表提醒站立休息",
-            camera: "中景",
-            audio: "键盘敲击声",
-          },
-        },
-        {
-          id: "kv-shot4",
-          key: "镜头4",
-          value: {
-            duration: "3s",
-            scene: "办公室",
-            description: "手表测量血氧，显示98%",
-            camera: "手部特写",
-            audio: "清脆提示音",
-          },
-        },
-        {
-          id: "kv-shot5",
-          key: "镜头5",
-          value: {
-            duration: "4s",
-            scene: "咖啡厅",
-            description: "与朋友约会，手表收到消息提醒",
-            camera: "双人中景",
-            audio: "咖啡厅环境音",
-          },
-        },
-        {
-          id: "kv-shot6",
-          key: "镜头6",
-          value: {
-            duration: "4s",
-            scene: "咖啡厅",
-            description: "展示手表多种表盘切换",
-            camera: "手腕特写",
-            audio: "轻快背景乐",
-          },
-        },
-        {
-          id: "kv-shot7",
-          key: "镜头7",
-          value: {
-            duration: "4s",
-            scene: "卧室",
-            description: "夜晚睡眠，手表监测睡眠质量",
-            camera: "暗调中景",
-            audio: "舒缓音乐",
-          },
-        },
-        {
-          id: "kv-shot8",
-          key: "镜头8",
-          value: {
-            duration: "4s",
-            scene: "产品展示",
-            description: "产品主图+LOGO+广告语+购买引导",
-            camera: "产品全景",
-            audio: "品牌音效",
-          },
+          id: "kv-shots-001",
+          key: "shots",
+          value: [
+            {
+              id: "shot-001",
+              sequence: 1,
+              thumbnailUrl:
+                "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=500&fit=crop",
+              duration: "10s",
+              notes:
+                "Use deep red tones with angled volumetric light cutting through subtle haze to create a premium, mysterious focal point that enhances the product's material quality.",
+              relatedAssetId: "asset-001",
+            },
+            {
+              id: "shot-002",
+              sequence: 2,
+              thumbnailUrl:
+                "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=500&fit=crop",
+              thumbnailUrls: [
+                // 设计稿为双图且可重复，这里用同一张图模拟
+                "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=500&fit=crop",
+                "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=500&fit=crop",
+              ],
+              duration: "8s",
+              notes:
+                "Use deep red tones with angled volumetric light cutting through subtle haze to create a premium, mysterious focal point that enhances the product's material quality.",
+              relatedAssetId: "asset-002",
+            },
+            {
+              id: "shot-003",
+              sequence: 3,
+              thumbnailUrl:
+                "https://images.unsplash.com/photo-1569974507005-6dc61f97fb5c?w=400&h=500&fit=crop",
+              duration: "7s",
+              notes:
+                "Reuse of brand-provided character drawing to ensure identity consistency; requires technical post-processing for transparency.",
+              relatedAssetId: "asset-003",
+            },
+            {
+              id: "shot-004",
+              sequence: 4,
+              thumbnailUrl:
+                "https://images.unsplash.com/photo-1519681393784-d120267933ba?w=400&h=500&fit=crop",
+              duration: "8s",
+              notes:
+                'Essential prop for establishing the classic "late for school" anime trope.',
+              relatedAssetId: "asset-004",
+            },
+            {
+              id: "shot-005",
+              sequence: 5,
+              thumbnailUrl:
+                "https://images.unsplash.com/photo-1569974507005-6dc61f97fb5c?w=400&h=500&fit=crop",
+              thumbnailUrls: [
+                "https://images.unsplash.com/photo-1569974507005-6dc61f97fb5c?w=400&h=500&fit=crop",
+                "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=500&fit=crop",
+              ],
+              duration: "4s",
+              notes:
+                'Essential prop for establishing the classic "late for school" anime trope.',
+              relatedAssetId: "asset-005",
+            },
+          ],
         },
       ],
     },
@@ -700,75 +801,28 @@ const MOCK_STORYBOARD: FlexibleDocument = {
 const MOCK_FINAL_VIDEO: FlexibleDocument = {
   type: "final-video",
   id: "final-video-001",
-  title: "成片交付 - 智能手表Pro Max 30秒广告",
-  createdAt: "2025-01-26T14:00:00Z",
+  title: "Final Video Deliverable",
+  createdAt: "2025-02-15T14:05:00Z",
   docs: [
     {
-      id: "block-videoInfo-001",
-      block: "视频信息",
+      id: "block-video-001",
+      block: "video",
       data: [
         {
-          id: "kv-title",
-          key: "视频标题",
-          value: "智能手表Pro Max - 活力每一刻",
+          id: "kv-video-001",
+          key: "video",
+          value: {
+            id: "video-001",
+            assetId: "asset-video-001",
+            title: "Final Production Video",
+            url: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
+            thumbnailUrl:
+              "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=800&h=1200&fit=crop",
+            type: "video",
+            duration: "15s",
+            description: "最终交付视频",
+          },
         },
-        { id: "kv-duration", key: "时长", value: "30秒" },
-        { id: "kv-resolution", key: "分辨率", value: "1080x1920 (9:16)" },
-        { id: "kv-fileSize", key: "文件大小", value: "45.6MB" },
-        { id: "kv-format", key: "格式", value: "MP4 / H.264" },
-      ],
-    },
-    {
-      id: "block-deliverables-001",
-      block: "交付文件",
-      data: [
-        {
-          id: "kv-mainVideo",
-          key: "主视频",
-          value: "watch-pro-max-30s-v1.mp4",
-        },
-        {
-          id: "kv-subtitleVersion",
-          key: "带字幕版",
-          value: "watch-pro-max-30s-v1-subtitle.mp4",
-        },
-        {
-          id: "kv-noMusicVersion",
-          key: "无音乐版",
-          value: "watch-pro-max-30s-v1-nomusic.mp4",
-        },
-        { id: "kv-coverImage", key: "封面图", value: "cover-thumbnail.jpg" },
-      ],
-    },
-    {
-      id: "block-platformVersions-001",
-      block: "平台适配版本",
-      data: [
-        {
-          id: "kv-douyin",
-          key: "抖音版",
-          value: "9:16竖版，已添加抖音水印位置预留",
-        },
-        { id: "kv-kuaishou", key: "快手版", value: "9:16竖版，封面优化" },
-        {
-          id: "kv-xiaohongshu",
-          key: "小红书版",
-          value: "3:4版本，适配小红书展示",
-        },
-        {
-          id: "kv-shipinhao",
-          key: "视频号版",
-          value: "9:16竖版，已适配视频号规范",
-        },
-      ],
-    },
-    {
-      id: "block-reviewStatus-001",
-      block: "审核状态",
-      data: [
-        { id: "kv-clientReview", key: "客户审核", value: "已通过 ✓" },
-        { id: "kv-legalReview", key: "法务审核", value: "已通过 ✓" },
-        { id: "kv-publishReady", key: "发布就绪", value: "是" },
       ],
     },
   ],
@@ -1200,6 +1254,52 @@ function ModuleDetailPanel({
 }) {
   const config = MODULE_CONFIG[document.type];
 
+  // Brief 类型使用专用卡片组件
+  if (document.type === "brief") {
+    return (
+      <div className="flex h-full flex-col overflow-y-auto bg-gray-50 p-4">
+        <BriefCard document={document} onClose={onClose} />
+      </div>
+    );
+  }
+
+  // CreativePlanning 类型使用专用卡片组件
+  if (document.type === "creative-planning") {
+    return (
+      <div className="flex h-full flex-col overflow-y-auto bg-gray-50 p-4">
+        <CreativePlanningCard document={document} onClose={onClose} />
+      </div>
+    );
+  }
+
+  // VisualAsset 类型使用专用卡片组件
+  if (document.type === "visual-asset") {
+    return (
+      <div className="flex h-full flex-col overflow-y-auto bg-gray-50 p-4">
+        <VisualAssetCard document={document} onClose={onClose} />
+      </div>
+    );
+  }
+
+  // Storyboard 类型使用专用卡片组件
+  if (document.type === "storyboard") {
+    return (
+      <div className="flex h-full flex-col overflow-y-auto bg-gray-50 p-4">
+        <StoryboardCard document={document} onClose={onClose} />
+      </div>
+    );
+  }
+
+  // FinalVideo 类型使用专用卡片组件
+  if (document.type === "final-video") {
+    return (
+      <div className="flex h-full flex-col overflow-y-auto bg-gray-50 p-4">
+        <FinalVideoCard document={document} onClose={onClose} />
+      </div>
+    );
+  }
+
+  // 其他类型使用通用布局
   return (
     <div className="flex h-full flex-col border-r border-gray-200 bg-white">
       {/* 头部 */}
@@ -1480,7 +1580,7 @@ export default function MaterialChatPage() {
       <div className="flex flex-1">
         {/* 模块详情面板（仅在有选中模块时显示） */}
         {activeDocument && (
-          <div className="w-96 shrink-0">
+          <div className="flex-1 shrink-0">
             <ModuleDetailPanel
               document={activeDocument}
               onClose={() => setActiveDocument(null)}

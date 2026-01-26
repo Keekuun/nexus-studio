@@ -9,6 +9,8 @@ export interface ImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   alt: string;
   /** 圆角大小 */
   borderRadius?: "sm" | "md" | "lg" | "none";
+  /** 图片填充方式（默认 cover） */
+  fit?: "cover" | "contain";
   /** 宽高比 */
   aspectRatio?: string;
   /** 具体的 CSS 宽度 */
@@ -32,6 +34,7 @@ export function Image({
   src,
   alt,
   borderRadius = "md",
+  fit = "cover",
   aspectRatio,
   width,
   height,
@@ -58,7 +61,10 @@ export function Image({
       <ImageComponent
         src={src}
         alt={alt}
-        className="object-cover transition-transform duration-300 group-hover:scale-105"
+        className={cn(
+          fit === "contain" ? "object-contain" : "object-cover",
+          "transition-transform duration-300 group-hover:scale-105"
+        )}
         fill
         {...props}
       />

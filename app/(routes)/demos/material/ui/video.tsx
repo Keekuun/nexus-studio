@@ -9,6 +9,8 @@ export interface VideoProps extends React.VideoHTMLAttributes<HTMLVideoElement> 
   poster?: string;
   /** 圆角大小 */
   borderRadius?: "sm" | "md" | "lg" | "none";
+  /** 视频填充方式（默认 cover） */
+  fit?: "cover" | "contain";
   /** 宽高比 */
   aspectRatio?: string;
   /** 具体的 CSS 宽度 */
@@ -32,6 +34,7 @@ export function Video({
   src,
   poster,
   borderRadius = "md",
+  fit = "cover",
   aspectRatio,
   width,
   height,
@@ -58,7 +61,10 @@ export function Video({
       <video
         src={src}
         poster={poster}
-        className="h-full w-full object-cover"
+        className={cn(
+          "h-full w-full",
+          fit === "contain" ? "object-contain" : "object-cover"
+        )}
         playsInline
         {...props}
       />
