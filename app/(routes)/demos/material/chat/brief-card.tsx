@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils/cn";
 import { Image } from "../ui/image";
 import { Video } from "../ui/video";
 import { AssetImageViewer } from "../ui/asset-image-viewer";
+import { MediaMasonry } from "../ui/media-masonry";
 import type {
   FlexibleDocument,
   DocumentBlock,
@@ -250,120 +251,15 @@ function ReferenceAssetsBlock({ block }: { block: DocumentBlock }) {
         Reference
       </p>
 
-      {/* 瀑布流三列布局 - 按照 Figma 设计稿 */}
-      <div className="flex items-start gap-5">
-        {/* 第一列：第一张图 + 视频 */}
-        <div className="flex flex-col gap-5">
-          {assets[0] && (
-            <div className="h-[224px] w-[225px] overflow-hidden rounded border-2 border-[#f5f6f7]">
-              {assets[0].type === "video" ? (
-                <Video
-                  src={assets[0].url || ""}
-                  poster={assets[0].thumbnailUrl}
-                  className="h-full w-full"
-                  onClick={() => handleAssetClick(0)}
-                />
-              ) : (
-                <Image
-                  src={assets[0].url || assets[0].thumbnailUrl || ""}
-                  alt={assets[0].title || "Reference"}
-                  className="h-full w-full"
-                  onClick={() => handleAssetClick(0)}
-                />
-              )}
-            </div>
-          )}
-          {assets[3] && (
-            <div className="h-[211px] w-[225px] overflow-hidden rounded border-2 border-[#f5f6f7]">
-              {assets[3].type === "video" ? (
-                <Video
-                  src={assets[3].url || ""}
-                  poster={assets[3].thumbnailUrl}
-                  className="h-full w-full"
-                  onClick={() => handleAssetClick(3)}
-                />
-              ) : (
-                <Image
-                  src={assets[3].url || assets[3].thumbnailUrl || ""}
-                  alt={assets[3].title || "Reference"}
-                  className="h-full w-full"
-                  onClick={() => handleAssetClick(3)}
-                />
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* 第二列 */}
-        {assets[1] && (
-          <div className="h-[272px] w-[201px] overflow-hidden rounded border-2 border-[#f5f6f7]">
-            {assets[1].type === "video" ? (
-              <Video
-                src={assets[1].url || ""}
-                poster={assets[1].thumbnailUrl}
-                className="h-full w-full"
-                onClick={() => handleAssetClick(1)}
-              />
-            ) : (
-              <Image
-                src={assets[1].url || assets[1].thumbnailUrl || ""}
-                alt={assets[1].title || "Reference"}
-                className="h-full w-full"
-                onClick={() => handleAssetClick(1)}
-              />
-            )}
-          </div>
-        )}
-
-        {/* 第三列 */}
-        {assets[2] && (
-          <div className="h-[388px] w-[217px] overflow-hidden rounded border-2 border-white shadow-[0px_1px_8px_0px_rgba(0,0,0,0.04)]">
-            {assets[2].type === "video" ? (
-              <Video
-                src={assets[2].url || ""}
-                poster={assets[2].thumbnailUrl}
-                className="h-full w-full"
-                onClick={() => handleAssetClick(2)}
-              />
-            ) : (
-              <Image
-                src={assets[2].url || assets[2].thumbnailUrl || ""}
-                alt={assets[2].title || "Reference"}
-                className="h-full w-full"
-                onClick={() => handleAssetClick(2)}
-              />
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* 超出4个的资源，使用网格展示 */}
-      {assets.length > 4 && (
-        <div className="grid grid-cols-4 gap-4">
-          {assets.slice(4).map((asset, idx) => (
-            <div
-              key={asset.id}
-              className="h-[150px] overflow-hidden rounded border-2 border-[#f5f6f7]"
-            >
-              {asset.type === "video" ? (
-                <Video
-                  src={asset.url || ""}
-                  poster={asset.thumbnailUrl}
-                  className="h-full w-full"
-                  onClick={() => handleAssetClick(idx + 4)}
-                />
-              ) : (
-                <Image
-                  src={asset.url || asset.thumbnailUrl || ""}
-                  alt={asset.title || "Reference"}
-                  className="h-full w-full"
-                  onClick={() => handleAssetClick(idx + 4)}
-                />
-              )}
-            </div>
-          ))}
-        </div>
-      )}
+      <MediaMasonry
+        assets={assets}
+        itemWidthPx={225}
+        columnGapPx={20}
+        itemGapPx={20}
+        defaultAspectRatio="9:16"
+        videoAspectRatio="16:9"
+        onItemClick={handleAssetClick}
+      />
 
       {/* 资源预览弹窗 */}
       <AssetImageViewer
