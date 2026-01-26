@@ -16,6 +16,10 @@ export { Video, type VideoProps } from "./video";
 
 // 业务组件
 export { AssetCard, type AssetCardProps } from "./asset-card";
+export {
+  AssetImageViewer,
+  type AssetImageViewerProps,
+} from "./asset-image-viewer";
 export { KeyValueRow, type KeyValueRowProps } from "./key-value-row";
 export { KeyValueItem, type KeyValueItemProps } from "./key-value-item";
 export {

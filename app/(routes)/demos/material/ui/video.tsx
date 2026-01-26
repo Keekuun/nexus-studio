@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { cn } from "@/lib/utils";
 import { Play } from "lucide-react";
 
@@ -39,22 +39,6 @@ export function Video({
   className,
   ...props
 }: VideoProps) {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const videoRef = React.useRef<HTMLVideoElement>(null);
-
-  const handlePlayClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (videoRef.current) {
-      if (isPlaying) {
-        videoRef.current.pause();
-      } else {
-        videoRef.current.play();
-      }
-      setIsPlaying(!isPlaying);
-    }
-    onClick?.();
-  };
-
   const containerStyle: React.CSSProperties = {
     width: width,
     height: height,
@@ -69,24 +53,21 @@ export function Video({
         className
       )}
       style={containerStyle}
-      onClick={handlePlayClick}
+      onClick={onClick}
     >
       <video
-        ref={videoRef}
         src={src}
         poster={poster}
         className="h-full w-full object-cover"
         playsInline
-        onEnded={() => setIsPlaying(false)}
         {...props}
       />
-      {!isPlaying && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/20 transition-colors group-hover:bg-black/30">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm transition-transform group-hover:scale-110">
-            <Play className="ml-1 h-6 w-6 fill-white text-white" />
-          </div>
+      {/* 播放图标覆盖层 */}
+      <div className="absolute inset-0 flex items-center justify-center bg-black/20 transition-colors group-hover:bg-black/30">
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm transition-transform group-hover:scale-110">
+          <Play className="ml-1 h-6 w-6 fill-white text-white" />
         </div>
-      )}
+      </div>
     </div>
   );
 }

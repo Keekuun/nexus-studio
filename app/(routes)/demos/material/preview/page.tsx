@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { Typography } from "../ui/typography";
 import { Tag } from "../ui/tag";
 import { TextButton } from "../ui/text-button";
@@ -8,10 +8,15 @@ import { Image } from "../ui/image";
 import { Video } from "../ui/video";
 import { AssetCard } from "../ui/asset-card";
 import { KeyValueRow } from "../ui/key-value-row";
+import { AssetImageViewer } from "../ui/asset-image-viewer";
 import { Asset, AssetType } from "../creative-types";
 
 export default function MaterialComponentsPreviewPage() {
-  // 模拟数据
+  // 预览状态
+  const [mediaPreviewOpen, setMediaPreviewOpen] = useState(false);
+  const [mediaPreviewIndex, setMediaPreviewIndex] = useState(0);
+
+  // 模拟数据 - 单个资产
   const imageAsset: Asset = {
     id: "asset-1",
     assetId: "asset-1",
@@ -35,6 +40,68 @@ export default function MaterialComponentsPreviewPage() {
     description:
       "High definition video clip of the model showcasing the summer collection.",
   };
+
+  // 媒体预览资产列表（Image 和 Video 组件使用）
+  const mediaAssets: Asset[] = [imageAsset, videoAsset];
+
+  // 处理媒体点击，打开预览
+  const handleMediaClick = (index: number) => {
+    setMediaPreviewIndex(index);
+    setMediaPreviewOpen(true);
+  };
+
+  // 多个资产数组 - 用于预览切换
+  const multipleAssets: Asset[] = [
+    {
+      id: "asset-3",
+      assetId: "asset-3",
+      title: "Product Showcase Image 1",
+      type: AssetType.IMAGE,
+      url: "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?q=80&w=2070&auto=format&fit=crop",
+      createdAt: new Date().toISOString(),
+      description: "First product showcase image with elegant design.",
+    },
+    {
+      id: "asset-4",
+      assetId: "asset-4",
+      title: "Product Showcase Image 2",
+      type: AssetType.IMAGE,
+      url: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=2070&auto=format&fit=crop",
+      createdAt: new Date().toISOString(),
+      description: "Second product showcase image highlighting details.",
+    },
+    {
+      id: "asset-5",
+      assetId: "asset-5",
+      title: "Product Showcase Video",
+      type: AssetType.VIDEO,
+      url: "https://videos.pexels.com/video-files/3209828/3209828-hd_1920_1080_25fps.mp4",
+      thumbnailUrl:
+        "https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=2070&auto=format&fit=crop",
+      createdAt: new Date().toISOString(),
+      description: "Product showcase video demonstrating features.",
+    },
+    {
+      id: "asset-6",
+      assetId: "asset-6",
+      title: "Product Showcase Image 3",
+      type: AssetType.IMAGE,
+      url: "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=2070&auto=format&fit=crop",
+      createdAt: new Date().toISOString(),
+      description: "Third product showcase image with different angle.",
+    },
+    {
+      id: "asset-7",
+      assetId: "asset-7",
+      title: "Behind the Scenes Video",
+      type: AssetType.VIDEO,
+      url: "https://videos.pexels.com/video-files/2491284/2491284-hd_1920_1080_30fps.mp4",
+      thumbnailUrl:
+        "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?q=80&w=2070&auto=format&fit=crop",
+      createdAt: new Date().toISOString(),
+      description: "Behind the scenes video of the production process.",
+    },
+  ];
 
   return (
     <div className="container mx-auto max-w-4xl space-y-12 py-10">
@@ -143,6 +210,7 @@ export default function MaterialComponentsPreviewPage() {
               src={imageAsset.url || ""}
               alt={imageAsset.title}
               aspectRatio="16:9"
+              onClick={() => handleMediaClick(0)}
             />
           </div>
           <div className="space-y-2">
@@ -151,9 +219,17 @@ export default function MaterialComponentsPreviewPage() {
               src={videoAsset.url || ""}
               poster={videoAsset.thumbnailUrl}
               aspectRatio="16:9"
+              onClick={() => handleMediaClick(1)}
             />
           </div>
         </div>
+        {/* 媒体预览组件 */}
+        <AssetImageViewer
+          assets={mediaAssets}
+          initialIndex={mediaPreviewIndex}
+          isOpen={mediaPreviewOpen}
+          onClose={() => setMediaPreviewOpen(false)}
+        />
       </section>
 
       {/* Molecules Section */}
@@ -178,18 +254,41 @@ export default function MaterialComponentsPreviewPage() {
 
           {/* Asset Cards */}
           <div className="space-y-4">
-            <Typography variant="h4">Asset Cards</Typography>
+            <Typography variant="h4">Asset Cards (Single Preview)</Typography>
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               <AssetCard
                 asset={imageAsset}
                 showDetails={true}
-                onAssetClick={(id) => alert(`Clicked asset: ${id}`)}
+                onAssetClick={(id) => console.log(`Clicked asset: ${id}`)}
               />
               <AssetCard
                 asset={videoAsset}
                 showDetails={true}
-                onAssetClick={(id) => alert(`Clicked asset: ${id}`)}
+                onAssetClick={(id) => console.log(`Clicked asset: ${id}`)}
               />
+            </div>
+          </div>
+
+          {/* Multiple Assets Preview */}
+          <div className="space-y-4">
+            <Typography variant="h4">
+              Asset Cards (Multiple Assets - Click to Switch)
+            </Typography>
+            <Typography variant="body" color="tertiary" className="text-sm">
+              Click any asset card to open preview, then use arrow keys or
+              navigation buttons to switch between multiple images and videos.
+            </Typography>
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
+              {multipleAssets.map((asset) => (
+                <AssetCard
+                  key={asset.id}
+                  asset={asset}
+                  assets={multipleAssets}
+                  showDetails={true}
+                  enablePreview={true}
+                  onAssetClick={(id) => console.log(`Clicked asset: ${id}`)}
+                />
+              ))}
             </div>
           </div>
         </div>
