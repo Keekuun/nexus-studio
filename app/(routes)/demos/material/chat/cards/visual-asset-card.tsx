@@ -10,6 +10,7 @@
 import { cn } from "@/lib/utils/cn";
 import type { FlexibleDocument, DocumentBlock } from "../../creative-types";
 import { Image } from "../../ui/image";
+import { Tag } from "../../ui/tag";
 
 // ==================== 图标组件 ====================
 const Icons = {
@@ -37,6 +38,8 @@ export interface VisualAssetCardProps {
   onClick?: () => void;
   /** 是否激活状态 */
   isActive?: boolean;
+  /** 是否已反馈 */
+  hasFeedback?: boolean;
   /** 额外的 CSS 类名 */
   className?: string;
 }
@@ -139,6 +142,7 @@ export function VisualAssetCard({
   document,
   onClick,
   isActive = false,
+  hasFeedback = false,
   className,
 }: VisualAssetCardProps) {
   // 提取关键信息
@@ -162,11 +166,18 @@ export function VisualAssetCard({
         className
       )}
       style={{
-        backgroundImage: `url("data:image/svg+xml;utf8,<svg viewBox='0 0 360 202' xmlns='http://www.w3.org/2000/svg' preserveAspectRatio='none'><rect x='0' y='0' height='100%' width='100%' fill='url(%23grad)' opacity='1'/><defs><radialGradient id='grad' gradientUnits='userSpaceOnUse' cx='0' cy='0' r='10' gradientTransform='matrix(-9.376 16.068 -28.578 -13.981 311.87 -16.068)'><stop stop-color='rgba(255,250,233,1)' offset='0.042046'/><stop stop-color='rgba(255,255,255,1)' offset='1'/></radialGradient></defs></svg>")`,
+        background: hasFeedback
+          ? "radial-gradient(105.32% 83.7% at 86.63% -7.95%, #ECECFF 4.2%, #FFF 100%)"
+          : "radial-gradient(105.32% 83.7% at 86.63% -7.95%, #FFFAE9 4.2%, #FFF 100%)",
       }}
     >
       {/* 顶部区域 */}
-      <div className="flex w-full flex-col items-start gap-[4px]">
+      <div className="relative flex w-full flex-col items-start gap-[4px]">
+        {hasFeedback && (
+          <div className="z-1 absolute right-0 top-0">
+            <Tag label="Feedback" variant="purple" />
+          </div>
+        )}
         {/* 类型标签行 */}
         <div className="flex w-full items-center justify-between">
           <div className="flex shrink-0 items-center gap-[2px] rounded-[4px]">
