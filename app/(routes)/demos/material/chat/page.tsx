@@ -17,11 +17,17 @@ import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { FlexibleDocument, DocumentType } from "../creative-types";
-import { BriefCard } from "./brief-card";
-import { CreativePlanningCard } from "./creative-planning-card";
-import { VisualAssetCard } from "./visual-asset-card";
-import { StoryboardCard } from "./storyboard-card";
-import { FinalVideoCard } from "./final-video-card";
+import { BriefDetail } from "./details/brief-detail";
+import { CreativePlanningDetail } from "./details/creative-planning-detail";
+import { VisualAssetDetail } from "./details/visual-asset-detail";
+import { StoryboardDetail } from "./details/storyboard-detail";
+import { FinalVideoDetail } from "./details/final-video-detail";
+import { BriefCard } from "./cards/brief-card";
+import { CreativePlanningCard } from "./cards/creative-planning-card";
+import { VisualAssetCard } from "./cards/visual-asset-card";
+import { StoryboardCard } from "./cards/storyboard-card";
+import { FinalVideoCard } from "./cards/final-video-card";
+import { log } from "console";
 
 // ==================== 图标组件 ====================
 const Icons = {
@@ -1142,34 +1148,59 @@ function ModuleCard({
   onClick: () => void;
   isActive: boolean;
 }) {
-  const config = MODULE_CONFIG[document.type];
+  // Brief 类型使用专用卡片组件
+  if (document.type === "brief") {
+    return (
+      <BriefCard document={document} onClick={onClick} isActive={isActive} />
+    );
+  }
 
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        "w-full rounded-xl border p-4 text-left transition-all",
-        isActive
-          ? "border-amber-300 bg-amber-50 shadow-sm"
-          : "border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm"
-      )}
-    >
-      <div className="mb-2 flex items-center gap-3">
-        <div className={cn("rounded-lg p-2", config.bgColor, config.color)}>
-          {config.icon}
-        </div>
-        <div>
-          <div className="text-xs text-gray-400">{config.label}</div>
-          <div className="text-sm font-medium text-gray-900">
-            {document.title}
-          </div>
-        </div>
-      </div>
-      <div className="text-xs text-gray-500">
-        {document.docs.length} 个区块 · {formatTime(document.createdAt)}
-      </div>
-    </button>
-  );
+  // Creative Planning 类型使用专用卡片组件
+  if (document.type === "creative-planning") {
+    return (
+      <CreativePlanningCard
+        document={document}
+        onClick={onClick}
+        isActive={isActive}
+      />
+    );
+  }
+
+  // Visual Asset 类型使用专用卡片组件
+  if (document.type === "visual-asset") {
+    return (
+      <VisualAssetCard
+        document={document}
+        onClick={onClick}
+        isActive={isActive}
+      />
+    );
+  }
+
+  // Storyboard 类型使用专用卡片组件
+  if (document.type === "storyboard") {
+    return (
+      <StoryboardCard
+        document={document}
+        onClick={onClick}
+        isActive={isActive}
+      />
+    );
+  }
+
+  // Final Video 类型使用专用卡片组件
+  if (document.type === "final-video") {
+    return (
+      <FinalVideoCard
+        document={document}
+        onClick={onClick}
+        isActive={isActive}
+      />
+    );
+  }
+
+  // 所有类型都已处理，返回 null（不应该到达这里）
+  return null;
 }
 
 // ==================== 消息组件 ====================
@@ -1254,47 +1285,47 @@ function ModuleDetailPanel({
 }) {
   const config = MODULE_CONFIG[document.type];
 
-  // Brief 类型使用专用卡片组件
+  // Brief 类型使用专用详情组件
   if (document.type === "brief") {
     return (
       <div className="flex h-full flex-col overflow-y-auto bg-gray-50 p-4">
-        <BriefCard document={document} onClose={onClose} />
+        <BriefDetail document={document} onClose={onClose} />
       </div>
     );
   }
 
-  // CreativePlanning 类型使用专用卡片组件
+  // CreativePlanning 类型使用专用详情组件
   if (document.type === "creative-planning") {
     return (
       <div className="flex h-full flex-col overflow-y-auto bg-gray-50 p-4">
-        <CreativePlanningCard document={document} onClose={onClose} />
+        <CreativePlanningDetail document={document} onClose={onClose} />
       </div>
     );
   }
 
-  // VisualAsset 类型使用专用卡片组件
+  // VisualAsset 类型使用专用详情组件
   if (document.type === "visual-asset") {
     return (
       <div className="flex h-full flex-col overflow-y-auto bg-gray-50 p-4">
-        <VisualAssetCard document={document} onClose={onClose} />
+        <VisualAssetDetail document={document} onClose={onClose} />
       </div>
     );
   }
 
-  // Storyboard 类型使用专用卡片组件
+  // Storyboard 类型使用专用详情组件
   if (document.type === "storyboard") {
     return (
       <div className="flex h-full flex-col overflow-y-auto bg-gray-50 p-4">
-        <StoryboardCard document={document} onClose={onClose} />
+        <StoryboardDetail document={document} onClose={onClose} />
       </div>
     );
   }
 
-  // FinalVideo 类型使用专用卡片组件
+  // FinalVideo 类型使用专用详情组件
   if (document.type === "final-video") {
     return (
       <div className="flex h-full flex-col overflow-y-auto bg-gray-50 p-4">
-        <FinalVideoCard document={document} onClose={onClose} />
+        <FinalVideoDetail document={document} onClose={onClose} />
       </div>
     );
   }

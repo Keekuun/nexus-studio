@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Final Video Card 组件
+ * Final Video Detail 组件
  * 基于 Figma 设计稿实现的 FinalVideo 模块详情卡片
  * 字段设计严格按照 asset.md 定义（block: "video" / key: "video"）
  * 设计稿: https://www.figma.com/design/Sq85xB6ku3wQ8fQkySXQUM node-id=455:145523
@@ -9,9 +9,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils/cn";
-import { Image } from "../ui/image";
-import type { Asset, FlexibleDocument } from "../creative-types";
-import { AssetType } from "../creative-types";
+import { Image } from "../../ui/image";
+import type { Asset, FlexibleDocument } from "../../creative-types";
+import { AssetType } from "../../creative-types";
 
 // ==================== 图标组件 ====================
 const Icons = {
@@ -67,7 +67,7 @@ const Icons = {
 };
 
 // ==================== 类型定义 ====================
-export interface FinalVideoCardProps {
+export interface FinalVideoDetailProps {
   /** FinalVideo 文档数据 */
   document: FlexibleDocument;
   /** 关闭回调 */
@@ -142,12 +142,12 @@ function getVideoAsset(document: FlexibleDocument): Asset | null {
   };
 }
 
-export function FinalVideoCard({
+export function FinalVideoDetail({
   document,
   onClose,
   onBatchFeedback,
   className,
-}: FinalVideoCardProps) {
+}: FinalVideoDetailProps) {
   const videoAsset = useMemo(() => getVideoAsset(document), [document]);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const timelineRef = useRef<HTMLDivElement | null>(null);
@@ -171,7 +171,7 @@ export function FinalVideoCard({
 
   const preventFrameClickRef = useRef(false);
 
-  // 设计稿底部是“时间轴缩略图条”，这里用 poster 重复模拟（不扩展数据结构）
+  // 设计稿底部是"时间轴缩略图条"，这里用 poster 重复模拟（不扩展数据结构）
   const timelineThumbs = useMemo(() => {
     const poster = videoAsset?.thumbnailUrl || "";
     return Array.from({ length: 18 }).map((_, idx) => ({
@@ -250,7 +250,7 @@ export function FinalVideoCard({
     timelineDragRef.current.isDown = false;
     setIsTimelineDragging(false);
 
-    // 鼠标拖动结束后的 click 事件会紧接着触发，这里用一帧时间屏蔽“误点击”
+    // 鼠标拖动结束后的 click 事件会紧接着触发，这里用一帧时间屏蔽"误点击"
     if (moved) {
       preventFrameClickRef.current = true;
       requestAnimationFrame(() => {
@@ -415,4 +415,4 @@ export function FinalVideoCard({
   );
 }
 
-export default FinalVideoCard;
+export default FinalVideoDetail;

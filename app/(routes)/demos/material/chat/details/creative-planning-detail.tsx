@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Creative Planning Card 组件
+ * Creative Planning Detail 组件
  * 基于 Figma 设计稿实现的 Creative Planning 模块详情卡片
  * 字段设计严格按照 asset.md 定义
  * 设计稿: https://www.figma.com/design/Sq85xB6ku3wQ8fQkySXQUM node-id=312:125460
@@ -9,8 +9,8 @@
 
 import { useState } from "react";
 import { cn } from "@/lib/utils/cn";
-import { AssetGrid } from "../ui/asset-grid";
-import type { FlexibleDocument, Asset, AssetType } from "../creative-types";
+import { AssetGrid } from "../../ui/asset-grid";
+import type { FlexibleDocument, Asset, AssetType } from "../../creative-types";
 
 // ==================== 图标组件 ====================
 const Icons = {
@@ -55,7 +55,7 @@ const Icons = {
 };
 
 // ==================== 类型定义 ====================
-export interface CreativePlanningCardProps {
+export interface CreativePlanningDetailProps {
   /** Creative Planning 文档数据 */
   document: FlexibleDocument;
   /** 关闭回调 */
@@ -211,12 +211,12 @@ function formatDateTime(timestamp: string): string {
 }
 
 // ==================== 主组件 ====================
-export function CreativePlanningCard({
+export function CreativePlanningDetail({
   document,
   onClose,
   onBatchFeedback,
   className,
-}: CreativePlanningCardProps) {
+}: CreativePlanningDetailProps) {
   const [selectedConceptIndex, setSelectedConceptIndex] = useState(0);
 
   // 从 concepts 区块获取 concepts 数据
@@ -301,4 +301,4 @@ export function CreativePlanningCard({
   );
 }
 
-export default CreativePlanningCard;
+export default CreativePlanningDetail;

@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Visual Asset Card 组件
+ * Visual Asset Detail 组件
  * 基于 Figma 设计稿实现的 Visual Asset 模块详情卡片
  * 字段设计严格按照 asset.md 定义
  * 设计稿: https://www.figma.com/design/Sq85xB6ku3wQ8fQkySXQUM node-id=356:143268
@@ -9,10 +9,10 @@
 
 import { useState } from "react";
 import { cn } from "@/lib/utils/cn";
-import { AssetTable } from "../ui/asset-table";
-import { AssetImageViewer } from "../ui/asset-image-viewer";
-import type { FlexibleDocument, Asset } from "../creative-types";
-import { AssetType } from "../creative-types";
+import { AssetTable } from "../../ui/asset-table";
+import { AssetImageViewer } from "../../ui/asset-image-viewer";
+import type { FlexibleDocument, Asset } from "../../creative-types";
+import { AssetType } from "../../creative-types";
 
 // ==================== 图标组件 ====================
 const Icons = {
@@ -83,7 +83,7 @@ const Icons = {
 };
 
 // ==================== 类型定义 ====================
-export interface VisualAssetCardProps {
+export interface VisualAssetDetailProps {
   /** Visual Asset 文档数据 */
   document: FlexibleDocument;
   /** 关闭回调 */
@@ -167,12 +167,12 @@ function formatDateTime(timestamp: string): string {
 }
 
 // ==================== 主组件 ====================
-export function VisualAssetCard({
+export function VisualAssetDetail({
   document,
   onClose,
   onBatchFeedback,
   className,
-}: VisualAssetCardProps) {
+}: VisualAssetDetailProps) {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
 
@@ -318,4 +318,4 @@ export function VisualAssetCard({
   );
 }
 
-export default VisualAssetCard;
+export default VisualAssetDetail;

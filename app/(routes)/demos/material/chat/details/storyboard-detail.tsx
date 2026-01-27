@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Storyboard Card 组件
+ * Storyboard Detail 组件
  * 基于 Figma 设计稿实现的 Storyboard 模块详情卡片
  * 字段设计严格按照 asset.md 定义（block: "shots" / key: "shots"）
  * 设计稿: https://www.figma.com/design/Sq85xB6ku3wQ8fQkySXQUM node-id=319:127357
@@ -9,10 +9,10 @@
 
 import { useMemo, useState } from "react";
 import { cn } from "@/lib/utils/cn";
-import { Image } from "../ui/image";
-import { AssetImageViewer } from "../ui/asset-image-viewer";
-import type { Asset, FlexibleDocument } from "../creative-types";
-import { AssetType } from "../creative-types";
+import { Image } from "../../ui/image";
+import { AssetImageViewer } from "../../ui/asset-image-viewer";
+import type { Asset, FlexibleDocument } from "../../creative-types";
+import { AssetType } from "../../creative-types";
 
 // ==================== 图标组件 ====================
 const Icons = {
@@ -59,7 +59,7 @@ const Icons = {
 };
 
 // ==================== 类型定义 ====================
-export interface StoryboardCardProps {
+export interface StoryboardDetailProps {
   /** Storyboard 文档数据 */
   document: FlexibleDocument;
   /** 关闭回调 */
@@ -100,7 +100,7 @@ function getShots(document: FlexibleDocument): StoryboardShot[] {
 }
 
 function getShotThumbnails(shot: StoryboardShot): string[] {
-  // 设计稿允许“单格双图”，且可能出现同一张图重复展示（例如第 2 行）
+  // 设计稿允许"单格双图"，且可能出现同一张图重复展示（例如第 2 行）
   // 所以这里不做去重，严格保留顺序与重复项
   const urls: string[] = [];
   if (Array.isArray(shot.thumbnailUrls) && shot.thumbnailUrls.length > 0) {
@@ -112,12 +112,12 @@ function getShotThumbnails(shot: StoryboardShot): string[] {
 }
 
 // ==================== 主组件 ====================
-export function StoryboardCard({
+export function StoryboardDetail({
   document,
   onClose,
   onBatchFeedback,
   className,
-}: StoryboardCardProps) {
+}: StoryboardDetailProps) {
   const shots = useMemo(() => getShots(document), [document]);
 
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -294,4 +294,4 @@ export function StoryboardCard({
   );
 }
 
-export default StoryboardCard;
+export default StoryboardDetail;

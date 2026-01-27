@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Brief Card 组件
+ * Brief Detail 组件
  * 基于 Figma 设计稿实现的 Brief 模块详情卡片
  * 字段设计严格按照 asset.md 定义
  * 设计稿: https://www.figma.com/design/Sq85xB6ku3wQ8fQkySXQUM
@@ -9,17 +9,17 @@
 
 import { useState } from "react";
 import { cn } from "@/lib/utils/cn";
-import { Image } from "../ui/image";
-import { Video } from "../ui/video";
-import { AssetImageViewer } from "../ui/asset-image-viewer";
-import { MediaMasonry } from "../ui/media-masonry";
+import { Image } from "../../ui/image";
+import { Video } from "../../ui/video";
+import { AssetImageViewer } from "../../ui/asset-image-viewer";
+import { MediaMasonry } from "../../ui/media-masonry";
 import type {
   FlexibleDocument,
   DocumentBlock,
   KeyValuePair,
   Asset,
   AssetType,
-} from "../creative-types";
+} from "../../creative-types";
 
 // ==================== 图标组件 ====================
 const Icons = {
@@ -66,7 +66,7 @@ const Icons = {
 };
 
 // ==================== 类型定义 ====================
-export interface BriefCardProps {
+export interface BriefDetailProps {
   /** Brief 文档数据 */
   document: FlexibleDocument;
   /** 关闭回调 */
@@ -365,12 +365,12 @@ function getBlockRenderer(
 }
 
 // ==================== 主组件 ====================
-export function BriefCard({
+export function BriefDetail({
   document,
   onClose,
   onBatchFeedback,
   className,
-}: BriefCardProps) {
+}: BriefDetailProps) {
   return (
     <div
       className={cn(
@@ -432,4 +432,4 @@ export function BriefCard({
   );
 }
 
-export default BriefCard;
+export default BriefDetail;

@@ -1,0 +1,23 @@
+{
+  "type": "brief",
+  "block_id": "brief-001",
+  "title": "Brief V2 Reference Picture Added",
+  "created_at": "2025-02-15T14:05:00Z",
+  "components": [
+    {
+      "block_id": "block-videoConfig-001",
+      "type": "videoConfig",
+      "data": [
+        { "block_id": "kv-duration-001", "type": "text", "data": "15s" },
+        {
+          "block_id": "kv-aspectRatio-001",
+          "type": "aspecttextRatio",
+          "data": "16:9"
+        },
+        { "block_id": "kv-resolution-001", "type": "text", "data": "1080p" },
+        { "block_id": "kv-frameRate-001", "type": "text", "data": "30fps" },
+        { "block_id": "kv-codec-001", "type": "text", "data": "H.264" }
+      ]
+    }
+  ]
+}

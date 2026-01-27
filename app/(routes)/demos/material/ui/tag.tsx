@@ -5,7 +5,7 @@ export interface TagProps {
   /** 标签文本 */
   label: string;
   /** 预设样式风格 */
-  variant?: "blue" | "orange" | "pink" | "default";
+  variant?: "blue" | "orange" | "pink" | "purple" | "default";
   /** 自定义背景色 (可选) */
   backgroundColor?: string;
   /** 自定义文字颜色 (可选) */
@@ -19,6 +19,8 @@ const variantStyles = {
   orange:
     "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300",
   pink: "bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300",
+  purple:
+    "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300",
   default: "bg-secondary text-secondary-foreground",
 };
 
