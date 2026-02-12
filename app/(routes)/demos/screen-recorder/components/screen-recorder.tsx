@@ -2,7 +2,8 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { useReactMediaRecorder } from "react-media-recorder";
-import { createFFmpeg, fetchFile } from "@ffmpeg/ffmpeg";
+import { FFmpeg } from "@ffmpeg/ffmpeg";
+import { fetchFile, toBlobURL } from "@ffmpeg/util";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -23,16 +24,12 @@ import {
   Loader2,
 } from "lucide-react";
 
-const ffmpeg = createFFmpeg({
-  log: true,
-  corePath: "https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js",
-});
-
 export default function ScreenRecorder() {
   const [isFFmpegLoaded, setIsFFmpegLoaded] = useState(false);
   const [processing, setProcessing] = useState(false);
   // Add error state for FFmpeg loading
   const [ffmpegError, setFfmpegError] = useState<string | null>(null);
+  const ffmpegRef = useRef(new FFmpeg());
 
   const {
     status,
@@ -51,9 +48,30 @@ export default function ScreenRecorder() {
 
   useEffect(() => {
     const load = async () => {
+      const baseURL =
+        "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
+      const ffmpeg = ffmpegRef.current;
+      ffmpeg.on("log", ({ message }) => {
+        console.log(message);
+      });
+
+      // Using jsDelivr and toBlobURL as recommended in official docs
       try {
-        if (!ffmpeg.isLoaded()) {
-          await ffmpeg.load();
+        if (!ffmpeg.loaded) {
+          await ffmpeg.load({
+            coreURL: await toBlobURL(
+              `${baseURL}/ffmpeg-core.js`,
+              "text/javascript"
+            ),
+            wasmURL: await toBlobURL(
+              `${baseURL}/ffmpeg-core.wasm`,
+              "application/wasm"
+            ),
+            workerURL: await toBlobURL(
+              `${baseURL}/ffmpeg-core.worker.js`,
+              "text/javascript"
+            ),
+          });
         }
         setIsFFmpegLoaded(true);
       } catch (err) {
@@ -86,14 +104,15 @@ export default function ScreenRecorder() {
   };
 
   // Helper: cleanup files
-  const cleanup = (files: string[]) => {
-    files.forEach((f) => {
+  const cleanup = async (files: string[]) => {
+    const ffmpeg = ffmpegRef.current;
+    for (const f of files) {
       try {
-        ffmpeg.FS("unlink", f);
+        await ffmpeg.deleteFile(f);
       } catch (e) {
         // ignore
       }
-    });
+    }
   };
 
   // 1. Export Complete MP4
@@ -101,6 +120,7 @@ export default function ScreenRecorder() {
     if (!mediaBlobUrl || !isFFmpegLoaded) return;
     setProcessing(true);
     setFfmpegError(null);
+    const ffmpeg = ffmpegRef.current;
     try {
       console.log("Start downloading MP4...");
       const blob = await fetch(mediaBlobUrl).then((r) => r.blob());
@@ -111,9 +131,9 @@ export default function ScreenRecorder() {
       }
 
       // Cleanup previous runs to avoid OOM
-      cleanup(["input.webm", "output.mp4"]);
+      await cleanup(["input.webm", "output.mp4"]);
 
-      ffmpeg.FS("writeFile", "input.webm", await fetchFile(blob));
+      await ffmpeg.writeFile("input.webm", await fetchFile(blob));
 
       // Try to convert to MP4 using default codecs (usually h264/aac)
       // Note: direct copy (-c:v copy) from webm(vp8/9) to mp4 is often problematic
@@ -121,7 +141,7 @@ export default function ScreenRecorder() {
       // Try using libx264 if available, otherwise fallback might happen or fail
       // Using -preset ultrafast to speed up
       // Using -crf 28 to reduce memory/cpu usage
-      await ffmpeg.run(
+      await ffmpeg.exec([
         "-i",
         "input.webm",
         "-c:v",
@@ -132,21 +152,23 @@ export default function ScreenRecorder() {
         "28",
         "-c:a",
         "aac",
-        "output.mp4"
-      );
+        "output.mp4",
+      ]);
 
-      const data = ffmpeg.FS("readFile", "output.mp4");
+      const data = await ffmpeg.readFile("output.mp4");
       console.log("Output MP4 size:", data.length);
 
       if (data.length === 0) throw new Error("转码生成了空文件");
 
       // Copy data to a new Uint8Array to ensure it uses a standard ArrayBuffer (not SharedArrayBuffer)
       // which avoids TypeScript type errors without using 'any'
-      const mp4Blob = new Blob([new Uint8Array(data)], { type: "video/mp4" });
+      const mp4Blob = new Blob([new Uint8Array(data as any)], {
+        type: "video/mp4",
+      });
       downloadBlob(mp4Blob, `recording-full-${Date.now()}.mp4`);
 
       // Cleanup after success
-      cleanup(["input.webm", "output.mp4"]);
+      await cleanup(["input.webm", "output.mp4"]);
     } catch (e: any) {
       console.error("MP4 conversion failed:", e);
       setFfmpegError(
@@ -170,32 +192,33 @@ export default function ScreenRecorder() {
     if (!mediaBlobUrl || !isFFmpegLoaded) return;
     setProcessing(true);
     setFfmpegError(null);
+    const ffmpeg = ffmpegRef.current;
     try {
       const blob = await fetch(mediaBlobUrl).then((r) => r.blob());
-      cleanup(["input.webm", "video_only.webm"]);
-      ffmpeg.FS("writeFile", "input.webm", await fetchFile(blob));
+      await cleanup(["input.webm", "video_only.webm"]);
+      await ffmpeg.writeFile("input.webm", await fetchFile(blob));
 
       // Output as mp4 (transcode) or webm (copy)
       // Trying copy to webm first as it's faster and safer
       console.log("Extracting video only (WebM)...");
-      await ffmpeg.run(
+      await ffmpeg.exec([
         "-i",
         "input.webm",
         "-an",
         "-c:v",
         "copy",
-        "video_only.webm"
-      );
+        "video_only.webm",
+      ]);
 
-      const data = ffmpeg.FS("readFile", "video_only.webm");
+      const data = await ffmpeg.readFile("video_only.webm");
       if (data.length === 0) throw new Error("生成文件为空");
 
-      const videoBlob = new Blob([new Uint8Array(data)], {
+      const videoBlob = new Blob([new Uint8Array(data as any)], {
         type: "video/webm",
       });
       downloadBlob(videoBlob, `recording-video-only-${Date.now()}.webm`);
 
-      cleanup(["input.webm", "video_only.webm"]);
+      await cleanup(["input.webm", "video_only.webm"]);
     } catch (e: any) {
       console.error("Video only extraction failed:", e);
       setFfmpegError(`提取纯视频失败: ${e.message}`);
@@ -209,15 +232,16 @@ export default function ScreenRecorder() {
     if (!mediaBlobUrl || !isFFmpegLoaded) return;
     setProcessing(true);
     setFfmpegError(null);
+    const ffmpeg = ffmpegRef.current;
     try {
       const blob = await fetch(mediaBlobUrl).then((r) => r.blob());
-      cleanup(["input.webm", "video_only.mp4"]);
-      ffmpeg.FS("writeFile", "input.webm", await fetchFile(blob));
+      await cleanup(["input.webm", "video_only.mp4"]);
+      await ffmpeg.writeFile("input.webm", await fetchFile(blob));
 
       console.log("Extracting video only (MP4)...");
       // -an: remove audio
       // Transcode to h264 for MP4 container
-      await ffmpeg.run(
+      await ffmpeg.exec([
         "-i",
         "input.webm",
         "-an",
@@ -227,16 +251,18 @@ export default function ScreenRecorder() {
         "ultrafast",
         "-crf",
         "28",
-        "video_only.mp4"
-      );
+        "video_only.mp4",
+      ]);
 
-      const data = ffmpeg.FS("readFile", "video_only.mp4");
+      const data = await ffmpeg.readFile("video_only.mp4");
       if (data.length === 0) throw new Error("生成文件为空");
 
-      const videoBlob = new Blob([new Uint8Array(data)], { type: "video/mp4" });
+      const videoBlob = new Blob([new Uint8Array(data as any)], {
+        type: "video/mp4",
+      });
       downloadBlob(videoBlob, `recording-video-only-${Date.now()}.mp4`);
 
-      cleanup(["input.webm", "video_only.mp4"]);
+      await cleanup(["input.webm", "video_only.mp4"]);
     } catch (e: any) {
       console.error("Video only MP4 extraction failed:", e);
       setFfmpegError(`提取纯视频(MP4)失败: ${e.message}`);
@@ -250,13 +276,14 @@ export default function ScreenRecorder() {
     if (!mediaBlobUrl || !isFFmpegLoaded) return;
     setProcessing(true);
     setFfmpegError(null);
+    const ffmpeg = ffmpegRef.current;
     try {
       const blob = await fetch(mediaBlobUrl).then((r) => r.blob());
-      cleanup(["input.webm", "audio.mp3"]);
-      ffmpeg.FS("writeFile", "input.webm", await fetchFile(blob));
+      await cleanup(["input.webm", "audio.mp3"]);
+      await ffmpeg.writeFile("input.webm", await fetchFile(blob));
 
       console.log("Extracting audio...");
-      await ffmpeg.run(
+      await ffmpeg.exec([
         "-i",
         "input.webm",
         "-vn",
@@ -264,18 +291,18 @@ export default function ScreenRecorder() {
         "libmp3lame",
         "-q:a",
         "4",
-        "audio.mp3"
-      );
+        "audio.mp3",
+      ]);
 
-      const data = ffmpeg.FS("readFile", "audio.mp3");
+      const data = await ffmpeg.readFile("audio.mp3");
       if (data.length === 0) throw new Error("生成文件为空");
 
-      const audioBlob = new Blob([new Uint8Array(data)], {
+      const audioBlob = new Blob([new Uint8Array(data as any)], {
         type: "audio/mpeg",
       });
       downloadBlob(audioBlob, `recording-audio-${Date.now()}.mp3`);
 
-      cleanup(["input.webm", "audio.mp3"]);
+      await cleanup(["input.webm", "audio.mp3"]);
     } catch (e: any) {
       console.error("Audio extraction failed:", e);
       setFfmpegError(`提取纯音频失败: ${e.message}`);
