@@ -7,12 +7,19 @@ import { ErrorMessage } from "@/components/ui/error-message";
 import { useAIChat } from "@/lib/hooks/use-ai-chat";
 import { MessageContent } from "@/components/ai/message-content";
 import { cn } from "@/lib/utils/cn";
+import { RichInput } from "@/components/ai/rich-input";
 import type { AIMessage } from "@/types/ai";
 
 /**
  * 时间显示组件 - 避免 SSR hydration 错误
  */
-function TimeDisplay({ timestamp, className }: { timestamp: number; className?: string }): JSX.Element {
+function TimeDisplay({
+  timestamp,
+  className,
+}: {
+  timestamp: number;
+  className?: string;
+}): JSX.Element {
   const [timeString, setTimeString] = useState<string>("");
 
   useEffect(() => {
@@ -25,7 +32,11 @@ function TimeDisplay({ timestamp, className }: { timestamp: number; className?: 
     }
   }, [timestamp]);
 
-  return <p className={className}>{timeString || new Date(timestamp).toISOString().slice(11, 19)}</p>;
+  return (
+    <p className={className}>
+      {timeString || new Date(timestamp).toISOString().slice(11, 19)}
+    </p>
+  );
 }
 
 /**
@@ -79,24 +90,28 @@ export function ChatInterface(): JSX.Element {
   const isNearBottom = useCallback((): boolean => {
     const container = messagesContainerRef.current;
     if (!container) return true;
-    
+
     const threshold = 100; // 距离底部的阈值（像素）
-    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+    const distanceFromBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight;
     return distanceFromBottom <= threshold;
   }, []);
 
   /**
    * 滚动到底部
    */
-  const scrollToBottom = useCallback((force = false): void => {
-    // 如果用户正在滚动或不在底部，且不是强制滚动，则不滚动
-    if (!force && (!shouldAutoScroll || isUserScrolling || !isNearBottom())) {
-      return;
-    }
+  const scrollToBottom = useCallback(
+    (force = false): void => {
+      // 如果用户正在滚动或不在底部，且不是强制滚动，则不滚动
+      if (!force && (!shouldAutoScroll || isUserScrolling || !isNearBottom())) {
+        return;
+      }
 
-    // 使用 auto 而不是 smooth，减少晃眼
-    messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
-  }, [shouldAutoScroll, isUserScrolling, isNearBottom]);
+      // 使用 auto 而不是 smooth，减少晃眼
+      messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
+    },
+    [shouldAutoScroll, isUserScrolling, isNearBottom]
+  );
 
   /**
    * 处理用户滚动事件
@@ -110,7 +125,7 @@ export function ChatInterface(): JSX.Element {
     const handleScroll = (): void => {
       // 标记用户正在滚动
       setIsUserScrolling(true);
-      
+
       // 检查是否在底部
       const nearBottom = isNearBottom();
       setShouldAutoScroll(nearBottom);
@@ -154,7 +169,7 @@ export function ChatInterface(): JSX.Element {
       // 如果是最后一条消息且正在流式输出，或者用户已经在底部，则滚动
       const lastMessage = messages[messages.length - 1];
       const isStreaming = lastMessage?.metadata?.isStreaming;
-      
+
       if (isStreaming || shouldAutoScroll) {
         scrollToBottom();
       }
@@ -178,8 +193,8 @@ export function ChatInterface(): JSX.Element {
     }
   }, [loading, scrollToBottom]);
 
-  const handleSubmit = async (e: React.FormEvent): Promise<void> => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent): Promise<void> => {
+    e?.preventDefault();
     if (!input.trim() || loading) return;
 
     const message = input.trim();
@@ -188,8 +203,8 @@ export function ChatInterface(): JSX.Element {
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between p-4 border-b">
+    <div className="flex h-full flex-col">
+      <div className="flex items-center justify-between border-b p-4">
         <h2 className="text-xl font-semibold">AI助手</h2>
         <div className="flex items-center gap-2">
           {availableModels.length > 0 && (
@@ -197,7 +212,7 @@ export function ChatInterface(): JSX.Element {
               value={currentModel || defaultModel}
               onChange={(e) => setCurrentModel(e.target.value)}
               disabled={loading}
-              className="px-3 py-1.5 text-sm border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+              className="rounded-lg border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
             >
               {availableModels.map((model) => (
                 <option key={model} value={model}>
@@ -212,13 +227,13 @@ export function ChatInterface(): JSX.Element {
           </Button>
         </div>
       </div>
-      <div 
+      <div
         ref={messagesContainerRef}
-        className="flex-1 flex flex-col max-h-[500px] h-full overflow-y-auto p-4 space-y-4"
+        className="flex h-full max-h-[500px] flex-1 flex-col space-y-4 overflow-y-auto p-4"
       >
         {messages.length === 0 && (
-          <div className="text-center text-muted-foreground py-12 flex-1 flex flex-col items-center justify-center">
-            <p className="text-lg mb-2">开始与AI对话</p>
+          <div className="flex flex-1 flex-col items-center justify-center py-12 text-center text-muted-foreground">
+            <p className="mb-2 text-lg">开始与AI对话</p>
             <p className="text-sm">输入您的问题，AI将为您提供帮助</p>
           </div>
         )}
@@ -235,7 +250,7 @@ export function ChatInterface(): JSX.Element {
 
         {loading && (
           <div className="flex justify-start">
-            <div className="bg-muted rounded-lg p-4 flex items-center gap-3">
+            <div className="flex items-center gap-3 rounded-lg bg-muted p-4">
               <Loading size="sm" />
               <Button
                 variant="ghost"
@@ -268,31 +283,39 @@ export function ChatInterface(): JSX.Element {
         <div ref={messagesEndRef} />
       </div>
 
-      <form onSubmit={handleSubmit} className="p-4 border-t">
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="输入消息..."
-            className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-            disabled={loading}
-          />
-          {loading ? (
-            <Button
-              type="button"
-              variant="destructive"
-              onClick={cancelRequest}
-            >
-              取消
-            </Button>
-          ) : (
-            <Button type="submit" disabled={loading || !input.trim()}>
-              发送
-            </Button>
-          )}
+      <div className="border-t bg-background p-4">
+        <div className="flex items-start gap-2">
+          <div className="min-w-0 flex-1">
+            <RichInput
+              value={input}
+              onChange={setInput}
+              onSubmit={() => handleSubmit()}
+              disabled={loading}
+              placeholder="输入消息... (支持图片和标签)"
+            />
+          </div>
+          <div className="flex-shrink-0 pt-0.5">
+            {loading ? (
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={cancelRequest}
+                className="h-[44px]"
+              >
+                取消
+              </Button>
+            ) : (
+              <Button
+                onClick={(e) => handleSubmit(e)}
+                disabled={loading || !input.trim()}
+                className="h-[44px]"
+              >
+                发送
+              </Button>
+            )}
+          </div>
         </div>
-      </form>
+      </div>
     </div>
   );
 }
@@ -326,15 +349,10 @@ function ChatMessage({
   };
 
   return (
-    <div
-      className={cn(
-        "flex",
-        isUser ? "justify-end" : "justify-start"
-      )}
-    >
+    <div className={cn("flex", isUser ? "justify-end" : "justify-start")}>
       <div
         className={cn(
-          "max-w-[80%] rounded-lg p-4 group relative",
+          "group relative max-w-[80%] rounded-lg p-4",
           isUser
             ? "bg-primary text-primary-foreground"
             : "bg-muted text-foreground"
@@ -344,7 +362,7 @@ function ChatMessage({
         {!isUser && (
           <button
             onClick={handleCopy}
-            className="absolute top-2 right-2 p-1.5 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors z-10 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm shadow-sm"
+            className="absolute right-2 top-2 z-10 rounded-md bg-white/90 p-1.5 shadow-sm backdrop-blur-sm transition-colors hover:bg-gray-200 dark:bg-gray-800/90 dark:hover:bg-gray-700"
             title={copied ? "已复制" : "复制消息"}
           >
             {copied ? (
@@ -386,14 +404,14 @@ function ChatMessage({
         ) : (
           <MessageContent content={message.content} isUser={false} />
         )}
-        
+
         {/* 思考过程显示 */}
         {message.metadata?.thinking && !isUser && (
           <details className="mt-3 cursor-pointer">
-            <summary className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium">
+            <summary className="text-xs font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">
               💭 查看思考过程
             </summary>
-            <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg text-xs text-blue-700 dark:text-blue-300 whitespace-pre-wrap">
+            <div className="mt-2 whitespace-pre-wrap rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs text-blue-700 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-300">
               {message.metadata.thinking}
             </div>
           </details>
@@ -401,14 +419,20 @@ function ChatMessage({
 
         {/* 流式输出指示器 */}
         {message.metadata?.isStreaming && (
-          <div className="flex items-center gap-2 mt-2">
-            <span className="inline-block w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+          <div className="mt-2 flex items-center gap-2">
+            <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-blue-500" />
             <span className="text-xs text-muted-foreground">正在输入...</span>
           </div>
         )}
 
-        <div className="flex items-center justify-between mt-2">
-          <TimeDisplay timestamp={message.timestamp} className={cn("text-xs", isUser ? "text-primary-foreground/70" : "text-muted-foreground")} />
+        <div className="mt-2 flex items-center justify-between">
+          <TimeDisplay
+            timestamp={message.timestamp}
+            className={cn(
+              "text-xs",
+              isUser ? "text-primary-foreground/70" : "text-muted-foreground"
+            )}
+          />
           <div className="flex items-center gap-2">
             {message.metadata?.model && !isUser && (
               <p className={cn("text-xs", "text-muted-foreground")}>
@@ -416,21 +440,23 @@ function ChatMessage({
               </p>
             )}
             {/* AI消息的重试按钮 */}
-            {!isUser && !message.metadata?.isStreaming && isLastAssistant && onRetry && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onRetry}
-                className="h-6 px-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                title="重试此消息"
-              >
-                🔄
-              </Button>
-            )}
+            {!isUser &&
+              !message.metadata?.isStreaming &&
+              isLastAssistant &&
+              onRetry && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onRetry}
+                  className="h-6 px-2 text-xs opacity-0 transition-opacity group-hover:opacity-100"
+                  title="重试此消息"
+                >
+                  🔄
+                </Button>
+              )}
           </div>
         </div>
       </div>
     </div>
   );
 }
-
