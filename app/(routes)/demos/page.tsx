@@ -58,6 +58,15 @@ export default function DemosPage(): JSX.Element {
       tags: ["Screen Recording", "React Media Recorder", "Web API"],
       status: "已完成",
     },
+    {
+      id: "image-conversion",
+      title: "图片格式转换 Demo",
+      description:
+        "使用 use-img-to-webp hook 将 HEIC、HEIF、TIFF 等格式转换为 WebP 格式",
+      href: "/demos/image-conversion",
+      tags: ["图片处理", "格式转换", "WebP", "HEIC"],
+      status: "已完成",
+    },
     // 后续可以在这里添加更多案例
     // {
     //   id: "example-demo",
