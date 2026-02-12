@@ -72,6 +72,7 @@ export default function ScreenRecorder() {
   });
 
   const startRecording = () => {
+    clearBlobUrl();
     setRecordingTime(0);
     originalStartRecording();
   };
