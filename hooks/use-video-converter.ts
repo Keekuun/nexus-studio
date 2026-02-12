@@ -1,17 +1,24 @@
-import { useState, useRef, useCallback } from "react";
-import { VideoConverter } from "@/lib/utils/video-converter";
+import { useState, useRef, useCallback, useEffect } from "react";
+import {
+  VideoConverter,
+  VideoQuality,
+  TranscodeOptions,
+} from "@/lib/utils/video-converter";
 
 interface UseVideoConverterReturn {
   isLoaded: boolean;
   isProcessing: boolean;
   error: string | null;
-  loadFFmpeg: () => Promise<void>;
   /** Convert to MP4 (Video + Audio) */
-  convertToMp4: (blob: Blob) => Promise<Blob | null>;
+  convertToMp4: (
+    blob: Blob,
+    options?: TranscodeOptions
+  ) => Promise<Blob | null>;
   /** Extract video track only (Pure Video) */
   extractVideoOnly: (
     blob: Blob,
-    format: "webm" | "mp4"
+    format: "webm" | "mp4",
+    options?: TranscodeOptions
   ) => Promise<Blob | null>;
   /** Extract audio track only (Pure Audio) */
   extractAudioOnly: (blob: Blob) => Promise<Blob | null>;
@@ -29,7 +36,6 @@ interface UseVideoConverterReturn {
  * @example
  * ```tsx
  * const {
- *   loadFFmpeg,
  *   convertToMp4,
  *   extractVideoOnly,
  *   extractAudioOnly,
@@ -38,7 +44,7 @@ interface UseVideoConverterReturn {
  *   error
  * } = useVideoConverter();
  *
- * // 1. Load FFmpeg on mount
+ * // 1. Auto FFmpeg on mount
  * useEffect(() => {
  *   loadFFmpeg();
  * }, [loadFFmpeg]);
@@ -47,7 +53,16 @@ interface UseVideoConverterReturn {
  * const handleConvertToMp4 = async (webmBlob: Blob) => {
  *   if (!isLoaded || isProcessing) return;
  *
- *   const mp4Blob = await convertToMp4(webmBlob);
+ *   // Optional: Control quality, fps, bitrate
+ *   // quality: "original" | "1080p" | "720p" | "480p"
+ *   // fps: target frame rate (e.g. 30, 60)
+ *   // bitrate: target bitrate (e.g. "2500k"), overrides default CRF
+ *   const options = {
+ *     quality: "1080p" as const,
+ *     fps: 30
+ *   };
+ *
+ *   const mp4Blob = await convertToMp4(webmBlob, options);
  *   if (mp4Blob) {
  *     // Handle result (e.g., download)
  *     const url = URL.createObjectURL(mp4Blob);
@@ -57,7 +72,8 @@ interface UseVideoConverterReturn {
  *
  * // 3. Extract Video Only (No Audio)
  * const handleExtractVideo = async (webmBlob: Blob) => {
- *   const videoBlob = await extractVideoOnly(webmBlob, "mp4");
+ *   // Support same options for MP4 format
+ *   const videoBlob = await extractVideoOnly(webmBlob, "mp4", { quality: "720p" });
  *   // ...
  * };
  *
@@ -96,22 +112,32 @@ export function useVideoConverter(): UseVideoConverterReturn {
       setError(null);
     } catch (err) {
       console.error("FFmpeg load failed:", err);
-      setError("FFmpeg 加载失败，转码功能不可用。请检查网络或刷新重试。");
+      setError(
+        "FFmpeg failed to load. Transcoding is unavailable. Please check your network or refresh."
+      );
     }
   }, [getConverter]);
 
+  // Auto-load on mount if configured
+  useEffect(() => {
+    loadFFmpeg();
+  }, [loadFFmpeg]);
+
   const convertToMp4 = useCallback(
-    async (blob: Blob): Promise<Blob | null> => {
+    async (
+      blob: Blob,
+      options: TranscodeOptions = {}
+    ): Promise<Blob | null> => {
       if (!isLoaded) return null;
       setIsProcessing(true);
       setError(null);
 
       try {
-        const result = await getConverter().convertToMp4(blob);
+        const result = await getConverter().convertToMp4(blob, options);
         return result;
       } catch (e: any) {
         console.error("MP4 conversion failed:", e);
-        setError(`转码 MP4 失败: ${e.message || "未知错误"}`);
+        setError(`MP4 conversion failed: ${e.message || "Unknown error"}`);
         return null;
       } finally {
         setIsProcessing(false);
@@ -121,17 +147,25 @@ export function useVideoConverter(): UseVideoConverterReturn {
   );
 
   const extractVideoOnly = useCallback(
-    async (blob: Blob, format: "webm" | "mp4"): Promise<Blob | null> => {
+    async (
+      blob: Blob,
+      format: "webm" | "mp4",
+      options: TranscodeOptions = {}
+    ): Promise<Blob | null> => {
       if (!isLoaded) return null;
       setIsProcessing(true);
       setError(null);
 
       try {
-        const result = await getConverter().extractVideoOnly(blob, format);
+        const result = await getConverter().extractVideoOnly(
+          blob,
+          format,
+          options
+        );
         return result;
       } catch (e: any) {
         console.error("Video extraction failed:", e);
-        setError(`提取纯视频失败: ${e.message}`);
+        setError(`Video extraction failed: ${e.message}`);
         return null;
       } finally {
         setIsProcessing(false);
@@ -151,7 +185,7 @@ export function useVideoConverter(): UseVideoConverterReturn {
         return result;
       } catch (e: any) {
         console.error("Audio extraction failed:", e);
-        setError(`提取纯音频失败: ${e.message}`);
+        setError(`Audio extraction failed: ${e.message}`);
         return null;
       } finally {
         setIsProcessing(false);
@@ -164,7 +198,6 @@ export function useVideoConverter(): UseVideoConverterReturn {
     isLoaded,
     isProcessing,
     error,
-    loadFFmpeg,
     convertToMp4,
     extractVideoOnly,
     extractAudioOnly,

@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
 import { useReactMediaRecorder } from "react-media-recorder";
 import { useVideoConverter } from "@/hooks/use-video-converter";
+import { VideoQuality } from "@/lib/utils/video-converter";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -21,6 +22,7 @@ import {
   FileAudio,
   Film,
   Loader2,
+  Settings,
 } from "lucide-react";
 
 export default function ScreenRecorder() {
@@ -28,15 +30,31 @@ export default function ScreenRecorder() {
     isLoaded: isFFmpegLoaded,
     isProcessing: processing,
     error: ffmpegError,
-    loadFFmpeg,
     convertToMp4,
     extractVideoOnly,
     extractAudioOnly,
   } = useVideoConverter();
 
+  // Export Settings State
+  const [exportQuality, setExportQuality] = useState<VideoQuality>("1080p");
+  const [exportFps, setExportFps] = useState<number>(30);
+  const [exportBitrate, setExportBitrate] = useState<string>(""); // "" means auto/CRF
+
+  // Recording Settings State
+  const [recordingBitrate, setRecordingBitrate] = useState<string>(""); // "" means auto
+  const [recordingTime, setRecordingTime] = useState(0);
+
+  // Helper: Parse bitrate string to number (bps) for MediaRecorder
+  // "2500k" -> 2500000
+  const videoBitsPerSecond = useMemo(() => {
+    if (!recordingBitrate) return 8000000; // Default to 8Mbps for high quality recording
+    const kBits = parseInt(recordingBitrate.replace("k", ""), 10);
+    return kBits * 1000;
+  }, [recordingBitrate]);
+
   const {
     status,
-    startRecording,
+    startRecording: originalStartRecording,
     stopRecording,
     mediaBlobUrl,
     clearBlobUrl,
@@ -45,13 +63,34 @@ export default function ScreenRecorder() {
     screen: true,
     audio: true,
     blobPropertyBag: {
-      type: "video/mp4",
+      type: "video/webm",
+    },
+    // https://developer.mozilla.org/en-US/docs/Web/API/MediaRecorder/MediaRecorder
+    ...{
+      videoBitsPerSecond,
     },
   });
 
+  const startRecording = () => {
+    setRecordingTime(0);
+    originalStartRecording();
+  };
+
   useEffect(() => {
-    loadFFmpeg();
-  }, [loadFFmpeg]);
+    let interval: NodeJS.Timeout;
+    if (status === "recording") {
+      interval = setInterval(() => {
+        setRecordingTime((prev) => prev + 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [status]);
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  };
 
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -78,7 +117,13 @@ export default function ScreenRecorder() {
     try {
       console.log("Start downloading MP4...");
       const blob = await fetch(mediaBlobUrl).then((r) => r.blob());
-      const mp4Blob = await convertToMp4(blob);
+
+      const mp4Blob = await convertToMp4(blob, {
+        quality: exportQuality,
+        fps: exportFps,
+        bitrate: exportBitrate || undefined, // undefined uses CRF
+      });
+
       if (mp4Blob) {
         downloadBlob(mp4Blob, `recording-full-${Date.now()}.mp4`);
       }
@@ -92,6 +137,7 @@ export default function ScreenRecorder() {
     if (!mediaBlobUrl || !isFFmpegLoaded) return;
     try {
       const blob = await fetch(mediaBlobUrl).then((r) => r.blob());
+      // WebM 模式下通常使用 "copy" 指令，不进行重编码，因此忽略质量参数
       const videoBlob = await extractVideoOnly(blob, "webm");
       if (videoBlob) {
         downloadBlob(videoBlob, `recording-video-only-${Date.now()}.webm`);
@@ -106,7 +152,12 @@ export default function ScreenRecorder() {
     if (!mediaBlobUrl || !isFFmpegLoaded) return;
     try {
       const blob = await fetch(mediaBlobUrl).then((r) => r.blob());
-      const videoBlob = await extractVideoOnly(blob, "mp4");
+      // MP4 模式下支持自定义参数
+      const videoBlob = await extractVideoOnly(blob, "mp4", {
+        quality: exportQuality,
+        fps: exportFps,
+        bitrate: exportBitrate || undefined,
+      });
       if (videoBlob) {
         downloadBlob(videoBlob, `recording-video-only-${Date.now()}.mp4`);
       }
@@ -130,7 +181,7 @@ export default function ScreenRecorder() {
   };
 
   return (
-    <div className="container mx-auto max-w-4xl space-y-6 py-8">
+    <div className="max-w-8xl container mx-auto space-y-6 py-8">
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-bold">屏幕录制 Demo</h1>
         <p className="text-muted-foreground">
@@ -177,10 +228,64 @@ export default function ScreenRecorder() {
             {status === "recording" && (
               <div className="absolute right-4 top-4 flex animate-pulse items-center gap-2 rounded-full bg-red-600 px-3 py-1.5 text-sm font-medium text-white shadow-lg">
                 <div className="h-2 w-2 rounded-full bg-white" />
-                REC
+                REC {formatTime(recordingTime)}
               </div>
             )}
           </CardContent>
+
+          {/* Parameter Info Footer */}
+          <div className="grid grid-cols-2 gap-4 border-t bg-muted/10 p-4 text-xs text-muted-foreground md:grid-cols-4">
+            <div className="space-y-1">
+              <span className="font-semibold text-foreground">当前状态</span>
+              <div className="flex items-center gap-2">
+                <div
+                  className={`h-2 w-2 rounded-full ${
+                    status === "recording"
+                      ? "animate-pulse bg-red-500"
+                      : "bg-slate-300"
+                  }`}
+                />
+                <span className="uppercase">{status}</span>
+                {(status === "recording" ||
+                  (status === "stopped" && recordingTime > 0)) && (
+                  <span className="font-mono font-medium">
+                    ({formatTime(recordingTime)})
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <span className="font-semibold text-foreground">录制参数</span>
+              <p>
+                码率:{" "}
+                <span className="font-mono">
+                  {recordingBitrate || "自动 (8Mbps)"}
+                </span>
+              </p>
+              <p className="opacity-75">决定原始画质与体积</p>
+            </div>
+
+            <div className="space-y-1">
+              <span className="font-semibold text-foreground">导出配置</span>
+              <p>
+                规格: <span className="font-mono">{exportQuality}</span> /{" "}
+                <span className="font-mono">{exportFps}FPS</span>
+              </p>
+              <p>
+                码率:{" "}
+                <span className="font-mono">
+                  {exportBitrate || "自动(CRF)"}
+                </span>
+              </p>
+            </div>
+
+            <div className="space-y-1">
+              <span className="font-semibold text-foreground">参数说明</span>
+              <p>CRF: 智能平衡画质与大小</p>
+              <p>Bitrate: 固定数据传输率</p>
+            </div>
+          </div>
         </Card>
 
         <Card>
@@ -192,14 +297,40 @@ export default function ScreenRecorder() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* 1. Recording Settings & Controls */}
             {status === "idle" || status === "stopped" ? (
-              <Button
-                onClick={startRecording}
-                className="w-full bg-blue-600 hover:bg-blue-700"
-                size="lg"
-              >
-                <Monitor className="mr-2 h-4 w-4" /> 开始录制
-              </Button>
+              <div className="space-y-4">
+                <div className="space-y-2 rounded-md border bg-muted/20 p-3">
+                  <p className="flex items-center gap-2 text-sm font-medium">
+                    <Settings className="h-4 w-4" />
+                    录制设置
+                  </p>
+                  <div className="space-y-1">
+                    <label className="text-xs text-muted-foreground">
+                      录制码率 (影响画质与体积)
+                    </label>
+                    <select
+                      value={recordingBitrate}
+                      onChange={(e) => setRecordingBitrate(e.target.value)}
+                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <option value="">自动 (推荐, 高画质)</option>
+                      <option value="1000k">1 Mbps (节省空间)</option>
+                      <option value="2500k">2.5 Mbps (均衡)</option>
+                      <option value="5000k">5 Mbps (清晰)</option>
+                      <option value="8000k">8 Mbps (超清)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <Button
+                  onClick={startRecording}
+                  className="w-full bg-blue-600 hover:bg-blue-700"
+                  size="lg"
+                >
+                  <Monitor className="mr-2 h-4 w-4" /> 开始录制
+                </Button>
+              </div>
             ) : (
               <Button
                 onClick={stopRecording}
@@ -211,6 +342,7 @@ export default function ScreenRecorder() {
               </Button>
             )}
 
+            {/* 2. Export Settings & Controls */}
             {mediaBlobUrl && status === "stopped" && (
               <div className="space-y-3 border-t pt-4">
                 <div className="space-y-2 pb-2">
@@ -219,6 +351,66 @@ export default function ScreenRecorder() {
                     音频回放
                   </p>
                   <audio src={mediaBlobUrl} controls className="h-8 w-full" />
+                </div>
+
+                <div className="space-y-2 pb-2">
+                  <p className="flex items-center gap-2 text-sm font-medium">
+                    <Settings className="h-4 w-4" />
+                    导出设置
+                  </p>
+                  <div className="rounded-md border bg-muted/20 p-2 text-xs text-muted-foreground">
+                    调整导出文件的参数，支持转码压缩。
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="space-y-1">
+                      <label className="text-xs text-muted-foreground">
+                        清晰度
+                      </label>
+                      <select
+                        value={exportQuality}
+                        onChange={(e) =>
+                          setExportQuality(e.target.value as VideoQuality)
+                        }
+                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <option value="1080p">1080p</option>
+                        <option value="720p">720p</option>
+                        <option value="480p">480p</option>
+                        <option value="original">原始</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs text-muted-foreground">
+                        帧率
+                      </label>
+                      <select
+                        value={exportFps}
+                        onChange={(e) => setExportFps(Number(e.target.value))}
+                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <option value={30}>30 FPS</option>
+                        <option value={60}>60 FPS</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs text-muted-foreground">
+                        码率
+                      </label>
+                      <select
+                        value={exportBitrate}
+                        onChange={(e) => setExportBitrate(e.target.value)}
+                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <option value="">自动 (CRF)</option>
+                        <option value="1000k">1 Mbps</option>
+                        <option value="2500k">2.5 Mbps</option>
+                        <option value="5000k">5 Mbps</option>
+                        <option value="8000k">8 Mbps</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 gap-2">

@@ -1,6 +1,14 @@
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { fetchFile, toBlobURL } from "@ffmpeg/util";
 
+export type VideoQuality = "original" | "1080p" | "720p" | "480p";
+
+export interface TranscodeOptions {
+  quality?: VideoQuality;
+  fps?: number;
+  bitrate?: string; // e.g. "2500k", if provided, overrides CRF
+}
+
 export interface VideoConverterOptions {
   coreURL?: string;
   wasmURL?: string;
@@ -72,30 +80,60 @@ export class VideoConverter {
     }
   }
 
+  private getScaleFilter(quality: VideoQuality): string[] {
+    switch (quality) {
+      case "1080p":
+        return ["-vf", "scale=1920:-2"];
+      case "720p":
+        return ["-vf", "scale=1280:-2"];
+      case "480p":
+        return ["-vf", "scale=854:-2"];
+      case "original":
+      default:
+        return [];
+    }
+  }
+
   /**
    * 将 Blob 转换为 MP4
    */
-  async convertToMp4(blob: Blob): Promise<Blob> {
+  async convertToMp4(
+    blob: Blob,
+    options: TranscodeOptions = {}
+  ): Promise<Blob> {
     if (!this.ffmpeg.loaded) throw new Error("FFmpeg not loaded");
     if (blob.size === 0) throw new Error("Recording data is empty");
+
+    const { quality = "1080p", fps = 30, bitrate } = options;
 
     try {
       await this.cleanup(["input.webm", "output.mp4"]);
       await this.ffmpeg.writeFile("input.webm", await fetchFile(blob));
 
-      await this.ffmpeg.exec([
+      const args = [
         "-i",
         "input.webm",
         "-c:v",
         "libx264",
         "-preset",
         "ultrafast",
-        "-crf",
-        "28",
-        "-c:a",
-        "aac",
-        "output.mp4",
-      ]);
+      ];
+
+      // 如果指定了码率，则使用码率控制，否则使用 CRF
+      if (bitrate) {
+        args.push("-b:v", bitrate);
+      } else {
+        args.push("-crf", "28");
+      }
+
+      // 帧率控制
+      if (fps) {
+        args.push("-r", fps.toString());
+      }
+
+      args.push(...this.getScaleFilter(quality), "-c:a", "aac", "output.mp4");
+
+      await this.ffmpeg.exec(args);
 
       const data = await this.ffmpeg.readFile("output.mp4");
       if (data.length === 0)
@@ -114,9 +152,14 @@ export class VideoConverter {
   /**
    * Extract video track only (Pure Video)
    */
-  async extractVideoOnly(blob: Blob, format: "webm" | "mp4"): Promise<Blob> {
+  async extractVideoOnly(
+    blob: Blob,
+    format: "webm" | "mp4",
+    options: TranscodeOptions = {}
+  ): Promise<Blob> {
     if (!this.ffmpeg.loaded) throw new Error("FFmpeg not loaded");
 
+    const { quality = "1080p", fps = 30, bitrate } = options;
     const outputFile = format === "webm" ? "video_only.webm" : "video_only.mp4";
 
     try {
@@ -127,7 +170,19 @@ export class VideoConverter {
       if (format === "webm") {
         args.push("-c:v", "copy");
       } else {
-        args.push("-c:v", "libx264", "-preset", "ultrafast", "-crf", "28");
+        args.push("-c:v", "libx264", "-preset", "ultrafast");
+
+        if (bitrate) {
+          args.push("-b:v", bitrate);
+        } else {
+          args.push("-crf", "28");
+        }
+
+        if (fps) {
+          args.push("-r", fps.toString());
+        }
+
+        args.push(...this.getScaleFilter(quality));
       }
       args.push(outputFile);
 
