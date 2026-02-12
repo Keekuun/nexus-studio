@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useEffect, useRef, useState, useMemo } from "react";
 import { useReactMediaRecorder } from "react-media-recorder";
 import { useVideoConverter } from "@/hooks/use-video-converter";

@@ -1,6 +1,11 @@
 "use client";
 
-import ImageConversionDemo from "./components/image-conversion-demo";
+import dynamic from "next/dynamic";
+
+const ImageConversionDemo = dynamic(
+  () => import("./components/image-conversion-demo"),
+  { ssr: false }
+);
 
 export default function ImageConversionPage() {
   return (

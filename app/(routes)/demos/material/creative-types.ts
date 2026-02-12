@@ -130,6 +130,8 @@ export interface DocumentBlock {
 export interface FlexibleDocument extends BaseEntity {
   /** 文档类型 */
   type: DocumentType;
+  /** 文档描述 */
+  description?: string;
   /** 文档区块列表 */
   docs: DocumentBlock[];
 }

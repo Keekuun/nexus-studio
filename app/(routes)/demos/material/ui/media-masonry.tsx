@@ -52,8 +52,7 @@ export function MediaMasonry({
       }}
     >
       {assets.map((asset, index) => {
-        const isVideo =
-          asset.type === AssetType.VIDEO || asset.type === "video";
+        const isVideo = asset.type === AssetType.VIDEO;
         const aspectRatio = isVideo ? videoAspectRatio : defaultAspectRatio;
         const src = asset.url || asset.thumbnailUrl || "";
 
