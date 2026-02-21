@@ -48,7 +48,8 @@ function getSupportedMimeType(): string | null {
 }
 
 async function compressWithNativeMediaRecorder(
-  file: File
+  file: File,
+  onProgress?: (ratio: number) => void
 ): Promise<Blob | null> {
   if (typeof window === "undefined") return null;
   if (typeof MediaRecorder === "undefined") return null;
@@ -73,6 +74,18 @@ async function compressWithNativeMediaRecorder(
   });
 
   await loaded;
+
+  const duration = video.duration || 0;
+  if (duration > 0 && onProgress) {
+    const trackProgress = () => {
+      const ratio = Math.min(video.currentTime / duration, 1);
+      onProgress(ratio);
+      if (!video.ended) {
+        requestAnimationFrame(trackProgress);
+      }
+    };
+    requestAnimationFrame(trackProgress);
+  }
 
   const captureStream =
     (video as any).captureStream || (video as any).mozCaptureStream || null;
@@ -123,6 +136,7 @@ async function compressWithNativeMediaRecorder(
 }
 
 async function compressWithWebCodecsFrames(file: File): Promise<Blob | null> {
+  // WebCodecs 路径用于演示帧级编码性能，目前不提供可播放容器，仅比较大小与耗时
   if (typeof window === "undefined") return null;
   const w = window as any;
   const VideoEncoderCtor = w.VideoEncoder;
@@ -213,6 +227,8 @@ export default function MediaCompressDemo() {
   const [webCodecsSupported, setWebCodecsSupported] = useState(false);
   const [webCodecsError, setWebCodecsError] = useState<string | null>(null);
   const [activeMode, setActiveMode] = useState<CompressMode | null>(null);
+  const [progressMode, setProgressMode] = useState<CompressMode | null>(null);
+  const [progressValue, setProgressValue] = useState<number>(0);
 
   const {
     isLoaded: ffmpegLoaded,
@@ -253,6 +269,8 @@ export default function MediaCompressDemo() {
       setResult(null);
       setNativeError(null);
       setWebCodecsError(null);
+      setProgressMode(null);
+      setProgressValue(0);
     },
     [fileUrl, resultUrl]
   );
@@ -263,6 +281,8 @@ export default function MediaCompressDemo() {
     setNativeError(null);
     setWebCodecsError(null);
     setActiveMode(null);
+    setProgressMode(null);
+    setProgressValue(0);
     if (fileUrl) {
       URL.revokeObjectURL(fileUrl);
       setFileUrl(null);
@@ -279,16 +299,22 @@ export default function MediaCompressDemo() {
   const handleNativeCompress = useCallback(async () => {
     if (!file || !nativeSupported) return;
     setActiveMode("native");
+    setProgressMode("native");
+    setProgressValue(0);
     setNativeError(null);
 
     const start = performance.now();
     try {
-      const output = await compressWithNativeMediaRecorder(file);
+      const output = await compressWithNativeMediaRecorder(file, (ratio) => {
+        setProgressMode("native");
+        setProgressValue(Math.min(Math.max(ratio * 100, 0), 100));
+      });
       const end = performance.now();
 
       if (!output) {
         setNativeError("当前环境不支持原生 MediaRecorder 压缩");
         setActiveMode(null);
+        setProgressMode(null);
         return;
       }
 
@@ -307,12 +333,15 @@ export default function MediaCompressDemo() {
       setNativeError(error instanceof Error ? error.message : "原生压缩失败");
     } finally {
       setActiveMode(null);
+      setProgressMode(null);
     }
   }, [file, nativeSupported, resultUrl]);
 
   const handleFfmpegCompress = useCallback(async () => {
     if (!file || !ffmpegLoaded) return;
     setActiveMode("ffmpeg");
+    setProgressMode("ffmpeg");
+    setProgressValue(0);
 
     const start = performance.now();
     try {
@@ -340,6 +369,7 @@ export default function MediaCompressDemo() {
       setResultUrl(url);
     } finally {
       setActiveMode(null);
+      setProgressMode(null);
     }
   }, [file, ffmpegLoaded, convertToMp4, resultUrl]);
 
@@ -350,6 +380,8 @@ export default function MediaCompressDemo() {
       return;
     }
     setActiveMode("webcodecs");
+    setProgressMode("webcodecs");
+    setProgressValue(0);
     setWebCodecsError(null);
 
     const start = performance.now();
@@ -380,6 +412,7 @@ export default function MediaCompressDemo() {
       );
     } finally {
       setActiveMode(null);
+      setProgressMode(null);
     }
   }, [file, webCodecsSupported, resultUrl]);
 
@@ -515,8 +548,26 @@ export default function MediaCompressDemo() {
           </div>
 
           {processing && (
-            <div className="mt-4">
-              <Loading size="sm" text="正在压缩，请稍候..." />
+            <div className="mt-4 space-y-2">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>压缩进度</span>
+                {progressMode && progressMode !== "ffmpeg" && (
+                  <span>{progressValue.toFixed(0)}%</span>
+                )}
+                {progressMode === "ffmpeg" && <span>FFmpeg 压缩进行中...</span>}
+              </div>
+              <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                {progressMode && progressMode !== "ffmpeg" ? (
+                  <div
+                    className="h-full rounded-full bg-primary transition-all"
+                    style={{
+                      width: `${Math.min(Math.max(progressValue, 0), 100)}%`,
+                    }}
+                  />
+                ) : (
+                  <div className="h-full w-1/3 animate-pulse rounded-full bg-primary" />
+                )}
+              </div>
             </div>
           )}
         </CardContent>
