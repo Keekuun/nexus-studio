@@ -6,7 +6,8 @@ export type VideoQuality = "original" | "1080p" | "720p" | "480p";
 export interface TranscodeOptions {
   quality?: VideoQuality;
   fps?: number;
-  bitrate?: string; // e.g. "2500k", if provided, overrides CRF
+  bitrate?: string;
+  threads?: number;
 }
 
 export interface VideoConverterOptions {
@@ -18,7 +19,7 @@ export interface VideoConverterOptions {
 export class VideoConverter {
   private ffmpeg: FFmpeg;
   private baseURL =
-    "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
+    "https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.10/dist/umd";
 
   constructor() {
     this.ffmpeg = new FFmpeg();
@@ -104,7 +105,12 @@ export class VideoConverter {
     if (!this.ffmpeg.loaded) throw new Error("FFmpeg not loaded");
     if (blob.size === 0) throw new Error("Recording data is empty");
 
-    const { quality = "1080p", fps = 30, bitrate } = options;
+    const {
+      quality = "1080p",
+      fps = 30,
+      bitrate,
+      threads = navigator.hardwareConcurrency || 4,
+    } = options;
 
     try {
       await this.cleanup(["input.webm", "output.mp4"]);
@@ -129,6 +135,10 @@ export class VideoConverter {
       // 帧率控制
       if (fps) {
         args.push("-r", fps.toString());
+      }
+
+      if (typeof threads === "number" && threads > 0) {
+        args.push("-threads", threads.toString());
       }
 
       args.push(...this.getScaleFilter(quality), "-c:a", "aac", "output.mp4");
@@ -159,7 +169,12 @@ export class VideoConverter {
   ): Promise<Blob> {
     if (!this.ffmpeg.loaded) throw new Error("FFmpeg not loaded");
 
-    const { quality = "1080p", fps = 30, bitrate } = options;
+    const {
+      quality = "1080p",
+      fps = 30,
+      bitrate,
+      threads = navigator.hardwareConcurrency || 4,
+    } = options;
     const outputFile = format === "webm" ? "video_only.webm" : "video_only.mp4";
 
     try {
@@ -183,6 +198,10 @@ export class VideoConverter {
         }
 
         args.push(...this.getScaleFilter(quality));
+
+        if (typeof threads === "number" && threads > 0) {
+          args.push("-threads", threads.toString());
+        }
       }
       args.push(outputFile);
 

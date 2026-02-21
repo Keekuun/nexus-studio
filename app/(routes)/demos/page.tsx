@@ -67,6 +67,14 @@ export default function DemosPage(): JSX.Element {
       tags: ["图片处理", "格式转换", "WebP", "HEIC"],
       status: "已完成",
     },
+    {
+      id: "media-compress",
+      title: "音视频压缩性能对比",
+      description: "基于浏览器原生硬件编码与 FFmpeg.wasm 的音视频压缩性能测试",
+      href: "/demos/media-compress",
+      tags: ["视频压缩", "MediaRecorder", "WebCodecs", "FFmpeg.wasm"],
+      status: "进行中",
+    },
     // 后续可以在这里添加更多案例
     // {
     //   id: "example-demo",
